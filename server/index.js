@@ -3,8 +3,14 @@ import cors from "cors";
 import crypto from "node:crypto";
 import dotenv from "dotenv";
 import pool from "./db.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+const CLIENT_DIST = path.join(__dirname, "../client/dist");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -13,6 +19,9 @@ const FLAT_SHIPPING = 599;       // cents
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || "*" }));
 app.use(express.json({ limit: "50kb" }));
+
+// Serve built React frontend
+app.use(express.static(CLIENT_DIST));
 
 // ─── Health check ────────────────────────────────────────────────────────────
 app.get("/api/health", async (_req, res) => {
@@ -175,4 +184,10 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: "Something went wrong" });
 });
 
-app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+// ─── Catch-all: serve React app for all non-API routes ───────────────────────
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(CLIENT_DIST, "index.html"));
+});
+
+// Aletcloud requires binding to 0.0.0.0
+app.listen(PORT, "0.0.0.0", () => console.log(`Server running on http://0.0.0.0:${PORT}`));
