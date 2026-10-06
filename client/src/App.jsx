@@ -1,24 +1,33 @@
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
 import Header from "./components/Header.jsx";
 import CartDrawer from "./components/CartDrawer.jsx";
+import Footer from "./components/Footer.jsx";
 import Home from "./pages/Home.jsx";
 import Product from "./pages/Product.jsx";
 import Checkout from "./pages/Checkout.jsx";
 
 function NotFound() {
   return (
-    <section className="wrap page">
-      <h1>That page isn't here</h1>
+    <div className="page-empty">
+      <div style={{ fontSize: "3rem" }}>🔍</div>
+      <h1>Page not found</h1>
       <p>The link may be old or mistyped.</p>
-      <Link className="btn btn-blue" to="/">Back to the shop</Link>
-    </section>
+      <a className="btn btn-accent mt-4" href="/">Back to the shop</a>
+    </div>
   );
 }
 
 export default function App() {
+  // Persist dark mode preference
+  useEffect(() => {
+    const saved = localStorage.getItem("gedualpha-theme");
+    if (saved === "dark") document.documentElement.classList.add("dark");
+  }, []);
+
   return (
     <>
-      <div className="announce">Free shipping on orders over $60</div>
+      <div className="announce">🚚 Free shipping on orders over $60 — Shop now</div>
       <Header />
       <main>
         <Routes>
@@ -29,12 +38,7 @@ export default function App() {
         </Routes>
       </main>
       <CartDrawer />
-      <footer className="footer">
-        <div className="wrap footer-inner">
-          <strong className="logo">Marigold Supply</strong>
-          <p>Questions about an order? hello@marigold.example</p>
-        </div>
-      </footer>
+      <Footer />
     </>
   );
 }
