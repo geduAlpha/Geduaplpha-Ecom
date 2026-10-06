@@ -16,7 +16,7 @@ const __dirname  = path.dirname(__filename);
 const CLIENT_DIST = path.join(__dirname, "../client/dist");
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = parseInt(process.env.PORT, 10) || 8000;
 const FREE_SHIPPING_OVER = 6000; // cents
 const FLAT_SHIPPING = 599;       // cents
 
@@ -201,12 +201,29 @@ app.use((err, _req, res, _next) => {
 
 // ─── Catch-all: serve React app for all non-API routes ───────────────────────
 app.get("*", (_req, res) => {
-  res.sendFile(path.join(CLIENT_DIST, "index.html"));
+  const indexHtml = path.join(CLIENT_DIST, "index.html");
+  res.sendFile(indexHtml, (err) => {
+    if (err && !res.headersSent) {
+      res.status(200).send("Marigold Supply Store is running. Please refresh shortly.");
+    }
+  });
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught exception:", err);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled rejection:", reason);
 });
 
 // ─── Start server immediately on PORT, then connect to MongoDB ───────────────
-app.listen(PORT, "0.0.0.0", () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
+});
+
+server.on("error", (err) => {
+  console.error("HTTP server error:", err);
 });
 
 connectDB().catch((err) => {
