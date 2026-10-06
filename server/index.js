@@ -2,9 +2,12 @@ import express from "express";
 import cors from "cors";
 import crypto from "node:crypto";
 import dotenv from "dotenv";
-import pool from "./db.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import mongoose from "mongoose";
+import { connectDB } from "./db.js";
+import Product from "./models/Product.js";
+import Order from "./models/Order.js";
 
 dotenv.config();
 
@@ -23,48 +26,48 @@ app.use(express.json({ limit: "50kb" }));
 // Serve built React frontend
 app.use(express.static(CLIENT_DIST));
 
-// ─── Health check ────────────────────────────────────────────────────────────
-app.get("/api/health", async (_req, res) => {
-  try {
-    await pool.query("SELECT 1");
-    res.json({ status: "ok", db: "connected" });
-  } catch (err) {
-    res.status(500).json({ status: "error", db: err.message });
-  }
+// ─── Health check ─────────────────────────────────────────────────────────────
+app.get("/api/health", (_req, res) => {
+  const ready = mongoose.connection.readyState === 1;
+  res.status(ready ? 200 : 503).json({
+    status: ready ? "ok" : "error",
+    db:     ready ? "connected" : "disconnected",
+  });
 });
 
-// ─── Catalogue ───────────────────────────────────────────────────────────────
+// ─── Catalogue ────────────────────────────────────────────────────────────────
 app.get("/api/products", async (req, res) => {
   try {
     const { q = "", category = "all", sort = "featured", page = "1", limit = "12" } = req.query;
-    const needle = String(q).trim().toLowerCase();
-    const size   = Math.min(48, Math.max(1, parseInt(limit, 10) || 12));
+    const needle  = String(q).trim();
+    const size    = Math.min(48, Math.max(1, parseInt(limit, 10) || 12));
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const offset  = (pageNum - 1) * size;
 
-    let where  = [];
-    let params = [];
-
-    if (category !== "all") { where.push("category = ?"); params.push(category); }
-    if (needle)             { where.push("(LOWER(name) LIKE ? OR LOWER(description) LIKE ?)"); params.push(`%${needle}%`, `%${needle}%`); }
-
-    const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    // Build filter
+    const filter = {};
+    if (category !== "all") filter.category = category;
+    if (needle) {
+      // Escape regex special chars before building the pattern
+      const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const rx = new RegExp(escaped, "i");
+      filter.$or = [{ name: rx }, { description: rx }];
+    }
 
     const sortMap = {
-      "price-asc":  "price ASC",
-      "price-desc": "price DESC",
-      "name":       "name ASC",
-      "featured":   "created_at DESC",
+      "price-asc":  { price:  1 },
+      "price-desc": { price: -1 },
+      "name":       { name:   1 },
+      "featured":   { createdAt: -1 },
     };
-    const orderBy = sortMap[sort] || "created_at DESC";
+    const sortBy = sortMap[sort] || { createdAt: -1 };
 
-    const [[{ total }]] = await pool.query(
-      `SELECT COUNT(*) AS total FROM products ${whereClause}`, params
-    );
-    const [items] = await pool.query(
-      `SELECT * FROM products ${whereClause} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
-      [...params, size, offset]
-    );
+    const [total, docs] = await Promise.all([
+      Product.countDocuments(filter),
+      Product.find(filter).sort(sortBy).skip(offset).limit(size).lean(),
+    ]);
+
+    const items = docs.map(({ _id, __v, ...rest }) => ({ id: _id, ...rest }));
 
     res.json({
       total,
@@ -80,15 +83,16 @@ app.get("/api/products", async (req, res) => {
 
 app.get("/api/products/:id", async (req, res) => {
   try {
-    const [[product]] = await pool.query("SELECT * FROM products WHERE id = ?", [req.params.id]);
-    if (!product) return res.status(404).json({ error: "Product not found" });
-    res.json(product);
+    const doc = await Product.findById(req.params.id).lean();
+    if (!doc) return res.status(404).json({ error: "Product not found" });
+    const { _id, __v, ...rest } = doc;
+    res.json({ id: _id, ...rest });
   } catch (err) {
     res.status(500).json({ error: "DB Error: " + err.message });
   }
 });
 
-// ─── Orders ──────────────────────────────────────────────────────────────────
+// ─── Orders ───────────────────────────────────────────────────────────────────
 const emailOk = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
 app.post("/api/orders", async (req, res) => {
@@ -102,49 +106,44 @@ app.post("/api/orders", async (req, res) => {
   if (!Array.isArray(items) || items.length === 0) errors.items = "Your cart is empty";
   if (Object.keys(errors).length) return res.status(400).json({ errors });
 
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
+  // Process items — atomically deduct stock per product using findOneAndUpdate
+  const lines    = [];  // validated line items for the order
+  const deducted = [];  // track what we've already deducted so we can roll back on error
 
-    const lines = [];
+  try {
     for (const { id, qty } of items) {
-      const [[product]] = await conn.query(
-        "SELECT * FROM products WHERE id = ? FOR UPDATE", [id]
-      );
-      if (!product || !Number.isInteger(qty) || qty < 1 || qty > 20) {
-        await conn.rollback();
+      if (!Number.isInteger(qty) || qty < 1 || qty > 20) {
+        await rollback(deducted);
         return res.status(400).json({ errors: { items: "One or more items are invalid" } });
       }
-      if (qty > product.stock) {
-        await conn.rollback();
-        return res.status(400).json({ errors: { items: `Only ${product.stock} left of ${product.name}` } });
+
+      // Atomic: only deduct if stock >= qty (prevents overselling without transactions)
+      const before = await Product.findOneAndUpdate(
+        { _id: id, stock: { $gte: qty } },
+        { $inc: { stock: -qty } },
+        { new: false } // return the pre-update doc for name/price
+      ).lean();
+
+      if (!before) {
+        // Either product doesn't exist or not enough stock
+        const exists = await Product.findById(id).lean();
+        await rollback(deducted);
+        const msg = exists
+          ? `Only ${exists.stock} left of "${exists.name}"`
+          : "One or more items are invalid";
+        return res.status(400).json({ errors: { items: msg } });
       }
-      lines.push({ id: product.id, name: product.name, price: product.price, qty });
+
+      deducted.push({ id: before._id, qty });
+      lines.push({ productId: before._id, name: before.name, price: before.price, qty });
     }
 
     const subtotal = lines.reduce((n, l) => n + l.price * l.qty, 0);
     const shipping = subtotal >= FREE_SHIPPING_OVER ? 0 : FLAT_SHIPPING;
     const orderId  = crypto.randomUUID().slice(0, 8).toUpperCase();
 
-    await conn.query(
-      `INSERT INTO orders (id, customer_name, customer_email, customer_address, customer_city, customer_postal, subtotal, shipping, total)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [orderId, customer.name.trim(), customer.email.trim(), customer.address.trim(),
-       customer.city.trim(), customer.postal.trim(), subtotal, shipping, subtotal + shipping]
-    );
-
-    for (const line of lines) {
-      await conn.query(
-        "INSERT INTO order_items (order_id, product_id, name, price, qty) VALUES (?, ?, ?, ?, ?)",
-        [orderId, line.id, line.name, line.price, line.qty]
-      );
-      await conn.query("UPDATE products SET stock = stock - ? WHERE id = ?", [line.qty, line.id]);
-    }
-
-    await conn.commit();
-
-    res.status(201).json({
-      id: orderId,
+    const order = await Order.create({
+      _id:      orderId,
       customer: {
         name:    customer.name.trim(),
         email:   customer.email.trim(),
@@ -152,33 +151,49 @@ app.post("/api/orders", async (req, res) => {
         city:    customer.city.trim(),
         postal:  customer.postal.trim(),
       },
-      items: lines,
+      items,   // embedded in the order document
       subtotal,
       shipping,
       total: subtotal + shipping,
-      createdAt: new Date().toISOString(),
+    });
+
+    res.status(201).json({
+      id:       order._id,
+      customer: order.customer,
+      items:    lines,
+      subtotal,
+      shipping,
+      total:    subtotal + shipping,
+      createdAt: order.createdAt,
     });
   } catch (err) {
-    await conn.rollback();
+    await rollback(deducted);
     console.error(err);
     res.status(500).json({ error: "DB Error: " + err.message });
-  } finally {
-    conn.release();
   }
 });
+
+/** Restore stock that was atomically deducted during a failed order */
+async function rollback(deducted) {
+  await Promise.allSettled(
+    deducted.map(({ id, qty }) =>
+      Product.findByIdAndUpdate(id, { $inc: { stock: qty } })
+    )
+  );
+}
 
 app.get("/api/orders/:id", async (req, res) => {
   try {
-    const [[order]] = await pool.query("SELECT * FROM orders WHERE id = ?", [req.params.id]);
-    if (!order) return res.status(404).json({ error: "Order not found" });
-    const [items] = await pool.query("SELECT * FROM order_items WHERE order_id = ?", [req.params.id]);
-    res.json({ ...order, items });
+    const doc = await Order.findById(req.params.id).lean();
+    if (!doc) return res.status(404).json({ error: "Order not found" });
+    const { _id, __v, ...rest } = doc;
+    res.json({ id: _id, ...rest });
   } catch (err) {
     res.status(500).json({ error: "DB Error: " + err.message });
   }
 });
 
-// ─── Error handler ───────────────────────────────────────────────────────────
+// ─── Error handler ────────────────────────────────────────────────────────────
 app.use((err, _req, res, _next) => {
   console.error(err);
   res.status(500).json({ error: "Something went wrong" });
@@ -189,5 +204,14 @@ app.get("*", (_req, res) => {
   res.sendFile(path.join(CLIENT_DIST, "index.html"));
 });
 
-// Aletcloud requires binding to 0.0.0.0
-app.listen(PORT, "0.0.0.0", () => console.log(`Server running on http://0.0.0.0:${PORT}`));
+// ─── Start: connect to MongoDB then bind HTTP ─────────────────────────────────
+connectDB()
+  .then(() => {
+    app.listen(PORT, "0.0.0.0", () =>
+      console.log(`Server running on http://0.0.0.0:${PORT}`)
+    );
+  })
+  .catch((err) => {
+    console.error("Failed to connect to MongoDB:", err.message);
+    process.exit(1);
+  });

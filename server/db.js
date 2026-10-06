@@ -1,15 +1,18 @@
-import mysql from "mysql2/promise";
+import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
 
-const pool = mysql.createPool({
-  host:     process.env.DB_HOST     || "127.0.0.1",
-  port:     process.env.DB_PORT     || 3306,
-  user:     process.env.DB_USER     || "root",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME     || "gedualpha_ecom",
-  waitForConnections: true,
-  connectionLimit: 10,
-});
+const uri = process.env.MONGODB_URI;
 
-export default pool;
+if (!uri) {
+  throw new Error(
+    "MONGODB_URI is not set. Add it to server/.env for local dev or to your Railway environment variables."
+  );
+}
+
+export async function connectDB() {
+  await mongoose.connect(uri, { serverSelectionTimeoutMS: 8000 });
+  console.log("MongoDB connected:", mongoose.connection.host);
+}
+
+export default mongoose;

@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "seed": "node database/seed.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^18.0.5",
     "express": "^4.19.2",
-    "mysql2": "^3.24.5"
+    "mongoose": "^8.24.5"
   }
 }
