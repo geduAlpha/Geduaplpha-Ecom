@@ -2,11 +2,13 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
 
-const uri = process.env.MONGODB_URI;
+const uri =
+  process.env.MONGODB_URI ||
+  "mongodb+srv://gedualpha1989_db_user:fIlIoozWg3X9z3i0@cluster0.dihvcpk.mongodb.net/gedualpha_ecom?retryWrites=true&w=majority&appName=Cluster0";
 
 if (!uri) {
   throw new Error(
-    "MONGODB_URI is not set. Add it to server/.env for local dev or to your Railway environment variables."
+    "MONGODB_URI is not set. Add it to server/.env for local dev or to your environment variables."
   );
 }
 
