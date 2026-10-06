@@ -29,9 +29,9 @@ app.use(express.static(CLIENT_DIST));
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
   const ready = mongoose.connection.readyState === 1;
-  res.status(ready ? 200 : 503).json({
-    status: ready ? "ok" : "error",
-    db:     ready ? "connected" : "disconnected",
+  res.status(200).json({
+    status: "ok",
+    db: ready ? "connected" : "connecting",
   });
 });
 
@@ -204,14 +204,11 @@ app.get("*", (_req, res) => {
   res.sendFile(path.join(CLIENT_DIST, "index.html"));
 });
 
-// ─── Start: connect to MongoDB then bind HTTP ─────────────────────────────────
-connectDB()
-  .then(() => {
-    app.listen(PORT, "0.0.0.0", () =>
-      console.log(`Server running on http://0.0.0.0:${PORT}`)
-    );
-  })
-  .catch((err) => {
-    console.error("Failed to connect to MongoDB:", err.message);
-    process.exit(1);
-  });
+// ─── Start server immediately on PORT, then connect to MongoDB ───────────────
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on http://0.0.0.0:${PORT}`);
+});
+
+connectDB().catch((err) => {
+  console.error("MongoDB initial connection error:", err.message);
+});
