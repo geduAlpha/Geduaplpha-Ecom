@@ -1,93 +1,90 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { money } from "../money.js";
 import ProductArt from "../components/ProductArt.jsx";
+import { getAdminAuth, setAdminAuth } from "../components/Header.jsx";
 
+/* ── Category & status config ───────────────────────────────────────── */
 const CATEGORIES = [
   { value: "electronics", label: "Electronics & Phones", icon: "📱", defaultArt: "phone" },
-  { value: "vehicles", label: "Vehicles & Auto", icon: "🚗", defaultArt: "car" },
-  { value: "property", label: "Real Estate / Property", icon: "🏠", defaultArt: "apartment" },
-  { value: "fashion", label: "Fashion & Beauty", icon: "👗", defaultArt: "dress" },
-  { value: "furniture", label: "Home & Furniture", icon: "🛋️", defaultArt: "sofa" },
-  { value: "stationery", label: "Desk & Stationery", icon: "📚", defaultArt: "notebook" },
-  { value: "services", label: "Services & Jobs", icon: "💼", defaultArt: "desk" },
+  { value: "vehicles",    label: "Vehicles & Auto",       icon: "🚗", defaultArt: "car" },
+  { value: "property",   label: "Real Estate",            icon: "🏠", defaultArt: "apartment" },
+  { value: "fashion",    label: "Fashion & Beauty",       icon: "👗", defaultArt: "dress" },
+  { value: "furniture",  label: "Home & Furniture",       icon: "🛋️", defaultArt: "sofa" },
+  { value: "stationery", label: "Desk & Stationery",      icon: "📚", defaultArt: "notebook" },
+  { value: "services",   label: "Services & Jobs",        icon: "💼", defaultArt: "desk" },
 ];
 
-const ORDER_STATUSES = [
-  { value: "all", label: "All Orders", color: "#64748b" },
-  { value: "pending", label: "⏳ Pending", color: "#eab308" },
-  { value: "paid", label: "✓ Paid / Verified", color: "#16a34a" },
-  { value: "processing", label: "⚙️ Processing", color: "#0284c7" },
-  { value: "shipped", label: "🚚 Shipped", color: "#8b5cf6" },
-  { value: "delivered", label: "📦 Delivered", color: "#059669" },
-  { value: "cancelled", label: "❌ Cancelled", color: "#ef4444" },
+const ORDER_STATUSES = ["pending","paid","processing","shipped","delivered","cancelled"];
+const STATUS_META = {
+  pending:    { label: "Pending",    color: "#eab308", bg: "#fefce8" },
+  paid:       { label: "Paid",       color: "#16a34a", bg: "#f0fdf4" },
+  processing: { label: "Processing", color: "#0284c7", bg: "#f0f9ff" },
+  shipped:    { label: "Shipped",    color: "#7c3aed", bg: "#faf5ff" },
+  delivered:  { label: "Delivered",  color: "#059669", bg: "#ecfdf5" },
+  cancelled:  { label: "Cancelled",  color: "#dc2626", bg: "#fef2f2" },
+};
+
+const SIDEBAR_ITEMS = [
+  { id: "dashboard", icon: "📊", label: "Dashboard" },
+  { id: "products",  icon: "📦", label: "Products" },
+  { id: "orders",    icon: "💳", label: "Orders" },
+  { id: "gateways",  icon: "⚙️", label: "Gateways" },
 ];
 
+/* ── Blank product form ─────────────────────────────────────────────── */
+const BLANK_FORM = {
+  name: "", category: "electronics", price: "", stock: 1,
+  condition: "Brand New", negotiable: false, featured: false,
+  image: "", art: "phone", color: "#2563EB", tint: "#EFF6FF",
+  description: "", city: "Addis Ababa", subcity: "Bole",
+  sellerName: "Gedualpha Admin Store", sellerPhone: "+251912627366",
+  sellerTelegram: "greatestvalue", sellerWhatsapp: "0941645784",
+};
+
+/* ════════════════════════════════════════════════════════════════════ */
 export default function Admin() {
-  const [isAuth, setIsAuth] = useState(
-    () => localStorage.getItem("gedualpha_admin_auth") === "true"
-  );
-  const [passwordInput, setPasswordInput] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
+  const navigate = useNavigate();
+  const [isAuth, setIsAuth] = useState(getAdminAuth);
 
-  // Active Tab
-  const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard", "products", "orders", "gateways"
+  /* tabs */
+  const [activeTab, setActiveTab] = useState("dashboard");
 
-  // Stats
-  const [stats, setStats] = useState(null);
-  const [statsLoading, setStatsLoading] = useState(true);
+  /* data */
+  const [stats,         setStats]         = useState(null);
+  const [statsLoading,  setStatsLoading]  = useState(true);
+  const [products,      setProducts]      = useState([]);
+  const [productTotal,  setProductTotal]  = useState(0);
+  const [prodSearch,    setProdSearch]    = useState("");
+  const [prodCategory,  setProdCategory]  = useState("all");
+  const [prodLoading,   setProdLoading]   = useState(false);
+  const [orders,        setOrders]        = useState([]);
+  const [orderTotal,    setOrderTotal]    = useState(0);
+  const [orderSearch,   setOrderSearch]   = useState("");
+  const [orderStatus,   setOrderStatus]   = useState("all");
+  const [orderLoading,  setOrderLoading]  = useState(false);
 
-  // Products state
-  const [products, setProducts] = useState([]);
-  const [productTotal, setProductTotal] = useState(0);
-  const [prodSearch, setProdSearch] = useState("");
-  const [prodCategory, setProdCategory] = useState("all");
-  const [prodLoading, setProdLoading] = useState(false);
-
-  // Orders state
-  const [orders, setOrders] = useState([]);
-  const [orderTotal, setOrderTotal] = useState(0);
-  const [orderSearch, setOrderSearch] = useState("");
-  const [orderStatus, setOrderStatus] = useState("all");
-  const [orderLoading, setOrderLoading] = useState(false);
-
-  // Modal States
+  /* modals */
   const [productModal, setProductModal] = useState({ open: false, mode: "add", data: null });
-  const [orderModal, setOrderModal] = useState({ open: false, data: null });
+  const [orderModal,   setOrderModal]   = useState({ open: false, data: null });
   const [modalLoading, setModalLoading] = useState(false);
   const [actionNotice, setActionNotice] = useState("");
+  const [prodForm,     setProdForm]     = useState(BLANK_FORM);
 
-  // Product Form state for Add/Edit
-  const [prodForm, setProdForm] = useState({
-    name: "",
-    category: "electronics",
-    price: "",
-    stock: 1,
-    condition: "Brand New",
-    negotiable: false,
-    featured: false,
-    image: "",
-    art: "phone",
-    color: "#2563EB",
-    tint: "#EFF6FF",
-    description: "",
-    city: "Addis Ababa",
-    subcity: "Bole",
-    sellerName: "Gedualpha Admin Store",
-    sellerPhone: "+251912627366",
-    sellerTelegram: "greatestvalue",
-    sellerWhatsapp: "0941645784",
-  });
+  /* sidebar collapse on mobile */
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Check auth & fetch data
+  /* ── Boot ── */
   useEffect(() => {
-    if (isAuth) {
-      loadStats();
-      if (activeTab === "products") loadProducts();
-      if (activeTab === "orders") loadOrders();
-    }
+    if (!isAuth) return;
+    loadStats();
+  }, [isAuth]);
+
+  useEffect(() => {
+    if (!isAuth) return;
+    if (activeTab === "products") loadProducts();
+    if (activeTab === "orders")   loadOrders();
   }, [isAuth, activeTab]);
 
   function notify(msg) {
@@ -95,175 +92,84 @@ export default function Admin() {
     setTimeout(() => setActionNotice(""), 4000);
   }
 
-  // ─── Auth Handler ───
-  async function handleLogin(e) {
-    e.preventDefault();
-    setAuthLoading(true);
-    setAuthError("");
-    try {
-      const res = await api.adminLogin(passwordInput);
-      if (res.status === "ok") {
-        setIsAuth(true);
-        localStorage.setItem("gedualpha_admin_auth", "true");
-      }
-    } catch (_err) {
-      setAuthError("Incorrect admin password. (Default is admin123)");
-    } finally {
-      setAuthLoading(false);
-    }
-  }
-
+  /* ── Auth ── */
   function handleLogout() {
+    setAdminAuth(false);
     setIsAuth(false);
-    localStorage.removeItem("gedualpha_admin_auth");
+    navigate("/");
   }
 
-  // ─── Data Loaders ───
+  /* ── Data loaders ── */
   async function loadStats() {
     setStatsLoading(true);
-    try {
-      const res = await api.adminStats();
-      setStats(res);
-    } catch (err) {
-      console.error("Stats load error:", err);
-    } finally {
-      setStatsLoading(false);
-    }
+    try { const r = await api.adminStats(); setStats(r); }
+    catch (e) { console.error(e); }
+    finally { setStatsLoading(false); }
   }
 
   async function loadProducts() {
     setProdLoading(true);
     try {
-      const res = await api.adminProducts({
-        q: prodSearch,
-        category: prodCategory,
-        limit: 100,
-      });
-      setProducts(res.items || []);
-      setProductTotal(res.total || 0);
-    } catch (err) {
-      console.error("Products load error:", err);
-    } finally {
-      setProdLoading(false);
-    }
+      const r = await api.adminProducts({ q: prodSearch, category: prodCategory, limit: 100 });
+      setProducts(r.items || []);
+      setProductTotal(r.total || 0);
+    } catch (e) { console.error(e); }
+    finally { setProdLoading(false); }
   }
 
   async function loadOrders() {
     setOrderLoading(true);
     try {
-      const res = await api.adminOrders({
-        q: orderSearch,
-        status: orderStatus,
-        limit: 100,
-      });
-      setOrders(res.items || []);
-      setOrderTotal(res.total || 0);
-    } catch (err) {
-      console.error("Orders load error:", err);
-    } finally {
-      setOrderLoading(false);
-    }
+      const r = await api.adminOrders({ q: orderSearch, status: orderStatus, limit: 100 });
+      setOrders(r.items || []);
+      setOrderTotal(r.total || 0);
+    } catch (e) { console.error(e); }
+    finally { setOrderLoading(false); }
   }
 
-  // ─── Product CRUD Handlers ───
-  function openAddProductModal() {
-    setProdForm({
-      name: "",
-      category: "electronics",
-      price: "",
-      stock: 1,
-      condition: "Brand New",
-      negotiable: false,
-      featured: false,
-      image: "",
-      art: "phone",
-      color: "#2563EB",
-      tint: "#EFF6FF",
-      description: "",
-      city: "Addis Ababa",
-      subcity: "Bole",
-      sellerName: "Gedualpha Admin Store",
-      sellerPhone: "+251912627366",
-      sellerTelegram: "greatestvalue",
-      sellerWhatsapp: "0941645784",
-    });
+  /* ── Product CRUD ── */
+  function openAddModal() {
+    setProdForm({ ...BLANK_FORM });
     setProductModal({ open: true, mode: "add", data: null });
   }
 
-  function openEditProductModal(p) {
+  function openEditModal(p) {
     setProdForm({
-      id: p.id,
-      name: p.name || "",
-      category: p.category || "electronics",
-      price: p.price || "",
-      stock: p.stock ?? 1,
-      condition: p.condition || "Brand New",
-      negotiable: Boolean(p.negotiable),
-      featured: Boolean(p.featured),
-      image: p.image || "",
-      art: p.art || "phone",
-      color: p.color || "#2563EB",
-      tint: p.tint || "#EFF6FF",
-      description: p.description || "",
-      city: p.location?.city || "Addis Ababa",
-      subcity: p.location?.subcity || "Bole",
-      sellerName: p.seller?.name || "Gedualpha Seller",
-      sellerPhone: p.seller?.phone || "+251912627366",
-      sellerTelegram: p.seller?.telegram || "greatestvalue",
-      sellerWhatsapp: p.seller?.whatsapp || "0941645784",
+      id: p.id, name: p.name || "", category: p.category || "electronics",
+      price: p.price || "", stock: p.stock ?? 1, condition: p.condition || "Brand New",
+      negotiable: Boolean(p.negotiable), featured: Boolean(p.featured),
+      image: p.image || "", art: p.art || "phone", color: p.color || "#2563EB",
+      tint: p.tint || "#EFF6FF", description: p.description || "",
+      city: p.location?.city || "Addis Ababa", subcity: p.location?.subcity || "Bole",
+      sellerName: p.seller?.name || "", sellerPhone: p.seller?.phone || "",
+      sellerTelegram: p.seller?.telegram || "", sellerWhatsapp: p.seller?.whatsapp || "",
     });
     setProductModal({ open: true, mode: "edit", data: p });
   }
 
   function handleImageFile(file) {
     if (!file || !file.type.startsWith("image/")) return;
-
-    // Guard: raw file over 5MB is almost certainly going to exceed limits
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Image is too large (max 5 MB). Please choose a smaller photo.");
-      return;
-    }
-
+    if (file.size > 5 * 1024 * 1024) { alert("Max 5 MB photo."); return; }
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        // Keep max dimension at 800px — enough for product thumbnails,
-        // well within the ~700 KB base64 budget we allow.
         const maxDim = 800;
-        let w = img.width;
-        let h = img.height;
+        let w = img.width, h = img.height;
         if (w > maxDim || h > maxDim) {
-          if (w > h) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
-          } else {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
-          }
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else       { w = Math.round(w * maxDim / h); h = maxDim; }
         }
         const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, w, h);
-
-        // Try progressively lower quality until the base64 fits under 700 KB
-        // (base64 overhead is ~33%, so 700 KB base64 ≈ ~525 KB binary)
-        const MAX_BASE64 = 700 * 1024; // characters ≈ bytes for ASCII base64
-        let quality = 0.72;
-        let dataUrl = canvas.toDataURL("image/jpeg", quality);
-
-        while (dataUrl.length > MAX_BASE64 && quality > 0.3) {
-          quality = Math.round((quality - 0.1) * 10) / 10;
-          dataUrl = canvas.toDataURL("image/jpeg", quality);
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        const MAX = 700 * 1024;
+        let q = 0.72, dataUrl = canvas.toDataURL("image/jpeg", q);
+        while (dataUrl.length > MAX && q > 0.3) {
+          q = Math.round((q - 0.1) * 10) / 10;
+          dataUrl = canvas.toDataURL("image/jpeg", q);
         }
-
-        if (dataUrl.length > MAX_BASE64) {
-          alert("Image is still too large after compression. Please use a smaller or simpler photo.");
-          return;
-        }
-
+        if (dataUrl.length > MAX) { alert("Image too large after compression. Use a smaller photo."); return; }
         setProdForm((prev) => ({ ...prev, image: dataUrl }));
       };
       img.src = e.target.result;
@@ -273,1163 +179,729 @@ export default function Admin() {
 
   async function handleSaveProduct(e) {
     e.preventDefault();
-    if (!prodForm.name.trim() || !prodForm.price) {
-      alert("Item title and price are required");
-      return;
-    }
-
+    if (!prodForm.name.trim() || !prodForm.price) { alert("Title and price are required."); return; }
     setModalLoading(true);
     const payload = {
-      name: prodForm.name.trim(),
-      category: prodForm.category,
-      price: Number(prodForm.price),
-      stock: Number(prodForm.stock),
-      condition: prodForm.condition,
-      negotiable: Boolean(prodForm.negotiable),
-      featured: Boolean(prodForm.featured),
-      image: prodForm.image || null,
-      art: prodForm.art,
-      color: prodForm.color,
-      tint: prodForm.tint,
+      name: prodForm.name.trim(), category: prodForm.category,
+      price: Number(prodForm.price), stock: Number(prodForm.stock),
+      condition: prodForm.condition, negotiable: Boolean(prodForm.negotiable),
+      featured: Boolean(prodForm.featured), image: prodForm.image || null,
+      art: prodForm.art, color: prodForm.color, tint: prodForm.tint,
       description: prodForm.description.trim(),
-      location: {
-        city: prodForm.city,
-        subcity: prodForm.subcity,
-      },
-      seller: {
-        name: prodForm.sellerName,
-        phone: prodForm.sellerPhone,
-        telegram: prodForm.sellerTelegram,
-        whatsapp: prodForm.sellerWhatsapp,
-      },
+      location: { city: prodForm.city, subcity: prodForm.subcity },
+      seller: { name: prodForm.sellerName, phone: prodForm.sellerPhone,
+                telegram: prodForm.sellerTelegram, whatsapp: prodForm.sellerWhatsapp },
     };
-
     try {
       if (productModal.mode === "add") {
         await api.adminCreateProduct(payload);
-        notify("🎉 New product created successfully!");
+        notify("🎉 New listing created!");
       } else {
         await api.adminUpdateProduct(prodForm.id, payload);
-        notify("✓ Product updated successfully!");
+        notify("✓ Listing updated!");
       }
       setProductModal({ open: false, mode: "add", data: null });
-      loadProducts();
-      loadStats();
+      loadProducts(); loadStats();
     } catch (err) {
-      alert("Failed to save product: " + err.message);
+      alert("Failed to save: " + err.message);
     } finally {
       setModalLoading(false);
     }
   }
 
   async function handleDeleteProduct(id, name) {
-    if (!window.confirm(`Are you sure you want to permanently delete "${name}"?`)) return;
-    try {
-      await api.adminDeleteProduct(id);
-      notify(`🗑️ Deleted listing "${name}"`);
-      loadProducts();
-      loadStats();
-    } catch (err) {
-      alert("Failed to delete product: " + err.message);
-    }
+    if (!confirm(`Delete "${name}"?`)) return;
+    try { await api.adminDeleteProduct(id); notify(`🗑️ Deleted "${name}"`); loadProducts(); loadStats(); }
+    catch (err) { alert("Delete failed: " + err.message); }
   }
 
   async function handleToggleFeatured(p) {
     try {
-      const nextVal = !p.featured;
-      await api.adminUpdateProduct(p.id, { featured: nextVal });
-      notify(`${nextVal ? "💎 Marked as Featured" : "Unmarked Featured"} for "${p.name}"`);
+      await api.adminUpdateProduct(p.id, { featured: !p.featured });
+      notify(`${!p.featured ? "💎 Marked featured" : "Removed featured"}: ${p.name}`);
       loadProducts();
-    } catch (err) {
-      alert("Failed to update status: " + err.message);
-    }
+    } catch (err) { alert("Update failed: " + err.message); }
   }
 
-  // ─── Order CRUD & Status Handlers ───
+  /* ── Order CRUD ── */
   async function handleQuickOrderStatus(orderId, newStatus) {
     try {
       await api.adminUpdateOrder(orderId, { status: newStatus });
-      notify(`✓ Order #${orderId} status updated to: ${newStatus.toUpperCase()}`);
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
-      );
+      notify(`✓ Order #${orderId} → ${newStatus.toUpperCase()}`);
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: newStatus } : o));
       loadStats();
-    } catch (err) {
-      alert("Failed to update order status: " + err.message);
-    }
+    } catch (err) { alert("Update failed: " + err.message); }
   }
 
-  async function handleDeleteOrder(orderId) {
-    if (!window.confirm(`Are you sure you want to delete Order #${orderId}?`)) return;
-    try {
-      await api.adminDeleteOrder(orderId);
-      notify(`🗑️ Order #${orderId} deleted.`);
-      loadOrders();
-      loadStats();
-    } catch (err) {
-      alert("Failed to delete order: " + err.message);
-    }
+  async function handleDeleteOrder(id) {
+    if (!confirm(`Delete order #${id}?`)) return;
+    try { await api.adminDeleteOrder(id); notify(`🗑️ Order #${id} deleted.`); loadOrders(); loadStats(); }
+    catch (err) { alert("Failed: " + err.message); }
   }
 
-  function openOrderInspector(o) {
-    setOrderModal({ open: true, data: o });
-  }
-
-  async function handleSaveOrderInspector(e) {
+  async function handleSaveOrder(e) {
     e.preventDefault();
     if (!orderModal.data) return;
     setModalLoading(true);
     try {
       await api.adminUpdateOrder(orderModal.data.id, {
-        status: orderModal.data.status,
-        paymentMethod: orderModal.data.paymentMethod,
-        paymentRef: orderModal.data.paymentRef,
-        notes: orderModal.data.notes,
+        status: orderModal.data.status, paymentMethod: orderModal.data.paymentMethod,
+        paymentRef: orderModal.data.paymentRef, notes: orderModal.data.notes,
       });
-      notify(`✓ Saved Order #${orderModal.data.id} details.`);
+      notify(`✓ Order #${orderModal.data.id} saved.`);
       setOrderModal({ open: false, data: null });
-      loadOrders();
-      loadStats();
-    } catch (err) {
-      alert("Failed to save order: " + err.message);
-    } finally {
-      setModalLoading(false);
-    }
+      loadOrders(); loadStats();
+    } catch (err) { alert("Failed: " + err.message); }
+    finally { setModalLoading(false); }
   }
 
-  // ─── Render: Login Lock Screen ───
+  /* ── Not authed → show login prompt ── */
   if (!isAuth) {
     return (
-      <div className="container admin-login-container">
-        <div className="admin-login-card">
-          <div className="admin-lock-icon">🛡️</div>
-          <h2>Gedualpha Admin Portal</h2>
-          <p>Enter the administrator passcode to access the store management dashboard.</p>
-
-          <form onSubmit={handleLogin} className="admin-login-form">
-            {authError && <div className="error-banner">{authError}</div>}
-            <div className="field">
-              <span>Admin Passcode / Password</span>
-              <input
-                type="password"
-                placeholder="Enter admin password (e.g. admin123)"
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <button
-              type="submit"
-              className="btn btn-accent btn-wide"
-              disabled={authLoading || !passwordInput}
-            >
-              {authLoading ? "Verifying…" : "🔓 Unlock Admin Dashboard"}
-            </button>
-            <span className="fine" style={{ marginTop: "0.5rem" }}>
-              Hint: Default password is <code>admin123</code>
-            </span>
-          </form>
+      <div className="adm-gate">
+        <div className="adm-gate-card">
+          <div className="adm-gate-glow" />
+          <div className="adm-gate-icon">🛡️</div>
+          <h1>Gedualpha Admin</h1>
+          <p>You need to be signed in as an admin to access this panel.</p>
+          <Link to="/" className="btn btn-ghost btn-wide" style={{ marginTop: "0.5rem" }}>
+            ← Back to Store
+          </Link>
+          <div className="adm-gate-hint">
+            Use the <strong>Admin</strong> button in the header to sign in.
+          </div>
         </div>
       </div>
     );
   }
 
-  // ─── Render: Main Admin Dashboard ───
+  /* ════════════════════════════════════════════════════════════════════
+     MAIN ADMIN LAYOUT
+  ════════════════════════════════════════════════════════════════════ */
   return (
-    <div className="container admin-page-container">
-      {actionNotice && <div className="admin-toast-banner">{actionNotice}</div>}
+    <div className="adm-shell">
 
-      {/* Admin Top Header */}
-      <div className="admin-header-row">
-        <div className="admin-title-col">
-          <div className="admin-badge-pill">🛡️ Gedualpha Admin Control Panel</div>
-          <h1>E-Commerce Management &amp; Operations</h1>
-          <p>Real-time analytics, inventory management, and transaction controls.</p>
+      {/* ── Sidebar ── */}
+      <aside className={`adm-sidebar ${sidebarOpen ? "open" : ""}`}>
+        <div className="adm-sidebar-brand">
+          <div className="adm-brand-icon">G</div>
+          <div>
+            <div className="adm-brand-name">Gedualpha</div>
+            <div className="adm-brand-sub">Admin Panel</div>
+          </div>
         </div>
 
-        <div className="admin-header-actions">
-          <button
-            type="button"
-            className="btn btn-accent btn-sm"
-            onClick={openAddProductModal}
-          >
-            ➕ Add New Listing
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={handleLogout}
-            title="Sign out of admin"
-          >
-            🚪 Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Admin Navigation Tabs */}
-      <div className="admin-nav-tabs">
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === "dashboard" ? "active" : ""}`}
-          onClick={() => setActiveTab("dashboard")}
-        >
-          📊 Dashboard Overview
-        </button>
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === "products" ? "active" : ""}`}
-          onClick={() => {
-            setActiveTab("products");
-            loadProducts();
-          }}
-        >
-          📦 Products &amp; Listings ({stats?.totalProducts ?? "…"})
-        </button>
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === "orders" ? "active" : ""}`}
-          onClick={() => {
-            setActiveTab("orders");
-            loadOrders();
-          }}
-        >
-          💳 Orders &amp; Transactions ({stats?.totalOrders ?? "…"})
-        </button>
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === "gateways" ? "active" : ""}`}
-          onClick={() => setActiveTab("gateways")}
-        >
-          ⚙️ Payment Gateways &amp; Config
-        </button>
-      </div>
-
-      {/* ─── TAB 1: DASHBOARD OVERVIEW ─── */}
-      {activeTab === "dashboard" && (
-        <div className="admin-tab-content">
-          {/* Top 4 KPI Metrics */}
-          <div className="admin-kpi-grid">
-            <div className="kpi-card">
-              <div className="kpi-icon-wrap" style={{ background: "#ecfdf5", color: "#059669" }}>
-                💵
-              </div>
-              <div className="kpi-data">
-                <span className="kpi-label">Total Volume / Revenue</span>
-                <h3 className="kpi-val">{stats ? money(stats.totalRevenue) : "…"}</h3>
-                <span className="kpi-sub">Across all marketplace orders</span>
-              </div>
-            </div>
-
-            <div className="kpi-card">
-              <div className="kpi-icon-wrap" style={{ background: "#eff6ff", color: "#2563eb" }}>
-                🛒
-              </div>
-              <div className="kpi-data">
-                <span className="kpi-label">Total Orders Placed</span>
-                <h3 className="kpi-val">{stats?.totalOrders ?? 0}</h3>
-                <span className="kpi-sub">
-                  {stats?.statusCounts?.pending ?? 0} Pending &bull; {stats?.statusCounts?.paid ?? 0} Paid
-                </span>
-              </div>
-            </div>
-
-            <div className="kpi-card">
-              <div className="kpi-icon-wrap" style={{ background: "#fdf4ff", color: "#9333ea" }}>
-                📦
-              </div>
-              <div className="kpi-data">
-                <span className="kpi-label">Active Listings</span>
-                <h3 className="kpi-val">{stats?.totalProducts ?? 0}</h3>
-                <span className="kpi-sub">
-                  {stats?.lowStockCount ? `⚠️ ${stats.lowStockCount} Low stock` : "All in stock"}
-                </span>
-              </div>
-            </div>
-
-            <div className="kpi-card">
-              <div className="kpi-icon-wrap" style={{ background: "#fffbeb", color: "#d97706" }}>
-                👁️
-              </div>
-              <div className="kpi-data">
-                <span className="kpi-label">Total Product Views</span>
-                <h3 className="kpi-val">{stats?.totalViews ?? 0}</h3>
-                <span className="kpi-sub">Ethiopian buyer impressions</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Order Status Grid */}
-          <div className="admin-status-breakdown-card">
-            <h3>Orders by Status</h3>
-            <div className="status-pills-row">
-              <div className="status-counter-pill pending">
-                <span>Pending</span>
-                <strong>{stats?.statusCounts?.pending ?? 0}</strong>
-              </div>
-              <div className="status-counter-pill paid">
-                <span>Paid / Verified</span>
-                <strong>{stats?.statusCounts?.paid ?? 0}</strong>
-              </div>
-              <div className="status-counter-pill processing">
-                <span>Processing</span>
-                <strong>{stats?.statusCounts?.processing ?? 0}</strong>
-              </div>
-              <div className="status-counter-pill shipped">
-                <span>Shipped</span>
-                <strong>{stats?.statusCounts?.shipped ?? 0}</strong>
-              </div>
-              <div className="status-counter-pill delivered">
-                <span>Delivered</span>
-                <strong>{stats?.statusCounts?.delivered ?? 0}</strong>
-              </div>
-              <div className="status-counter-pill cancelled">
-                <span>Cancelled</span>
-                <strong>{stats?.statusCounts?.cancelled ?? 0}</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Dual Column: Recent Orders & Quick Controls */}
-          <div className="admin-dual-grid">
-            {/* Recent Transactions */}
-            <div className="admin-card-section">
-              <div className="section-title-row">
-                <h3>Recent Orders &amp; Transactions</h3>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => {
-                    setActiveTab("orders");
-                    loadOrders();
-                  }}
-                >
-                  View All Orders →
-                </button>
-              </div>
-
-              {stats?.recentOrders?.length > 0 ? (
-                <div className="admin-table-wrap">
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>Order ID</th>
-                        <th>Customer</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stats.recentOrders.map((o) => (
-                        <tr key={o.id}>
-                          <td>
-                            <strong>#{o.id}</strong>
-                          </td>
-                          <td>
-                            <div>{o.customer?.name}</div>
-                            <span className="table-sub">{o.customer?.city}</span>
-                          </td>
-                          <td>
-                            <strong>{money(o.total)}</strong>
-                          </td>
-                          <td>
-                            <span className={`badge-status ${o.status || "pending"}`}>
-                              {o.status || "pending"}
-                            </span>
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              className="btn-action-view"
-                              onClick={() => openOrderInspector(o)}
-                            >
-                              Inspect
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="admin-empty-state">No orders recorded yet.</div>
+        <nav className="adm-sidebar-nav">
+          {SIDEBAR_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              className={`adm-nav-item ${activeTab === item.id ? "active" : ""}`}
+              onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+            >
+              <span className="adm-nav-icon">{item.icon}</span>
+              <span className="adm-nav-label">{item.label}</span>
+              {item.id === "products" && stats && (
+                <span className="adm-nav-badge">{stats.totalProducts}</span>
               )}
-            </div>
-
-            {/* Quick Actions & Low Stock */}
-            <div className="admin-card-section">
-              <div className="section-title-row">
-                <h3>⚡ Quick Management Actions</h3>
-              </div>
-
-              <div className="quick-action-btns">
-                <button
-                  type="button"
-                  className="quick-tile"
-                  onClick={openAddProductModal}
-                >
-                  <span className="tile-icon">➕</span>
-                  <div>
-                    <strong>Post New Marketplace Listing</strong>
-                    <p>Upload photos, set price &amp; location</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  className="quick-tile"
-                  onClick={() => {
-                    setActiveTab("products");
-                    loadProducts();
-                  }}
-                >
-                  <span className="tile-icon">📦</span>
-                  <div>
-                    <strong>Edit Inventory &amp; Stock</strong>
-                    <p>Adjust pricing and stock quantities</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  className="quick-tile"
-                  onClick={() => {
-                    setActiveTab("orders");
-                    loadOrders();
-                  }}
-                >
-                  <span className="tile-icon">💳</span>
-                  <div>
-                    <strong>Process Customer Orders</strong>
-                    <p>Mark Telebirr &amp; CBE payments as paid</p>
-                  </div>
-                </button>
-              </div>
-
-              {stats?.lowStockProducts?.length > 0 && (
-                <div className="low-stock-alert-box">
-                  <h4>⚠️ Low Stock Alert (≤ 3 left)</h4>
-                  <ul>
-                    {stats.lowStockProducts.map((p) => (
-                      <li key={p.id}>
-                        <span>{p.name}</span>
-                        <strong style={{ color: "#ef4444" }}>{p.stock} in stock</strong>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {item.id === "orders" && stats && (
+                <span className="adm-nav-badge">{stats.totalOrders}</span>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── TAB 2: PRODUCTS & LISTINGS (CRUD) ─── */}
-      {activeTab === "products" && (
-        <div className="admin-tab-content">
-          {/* Filter and Search Bar */}
-          <div className="admin-filter-bar">
-            <div className="filter-input-wrap">
-              <span>🔍</span>
-              <input
-                type="text"
-                placeholder="Search products by title or ID…"
-                value={prodSearch}
-                onChange={(e) => setProdSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && loadProducts()}
-              />
-            </div>
-
-            <select
-              value={prodCategory}
-              onChange={(e) => {
-                setProdCategory(e.target.value);
-              }}
-            >
-              <option value="all">All Categories</option>
-              {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.icon} {c.label}
-                </option>
-              ))}
-            </select>
-
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={loadProducts}
-            >
-              Filter
             </button>
+          ))}
+        </nav>
 
-            <button
-              type="button"
-              className="btn btn-accent btn-sm"
-              style={{ marginLeft: "auto" }}
-              onClick={openAddProductModal}
-            >
-              ➕ Add Product
+        <div className="adm-sidebar-footer">
+          <button className="adm-sidebar-post-btn" onClick={openAddModal}>
+            <span>＋</span> New Listing
+          </button>
+          <button className="adm-sidebar-logout" onClick={handleLogout}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Sidebar backdrop on mobile */}
+      {sidebarOpen && (
+        <div className="adm-sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* ── Main content ── */}
+      <div className="adm-main">
+
+        {/* Top bar */}
+        <div className="adm-topbar">
+          <button className="adm-topbar-menu" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+
+          <div className="adm-topbar-title">
+            {SIDEBAR_ITEMS.find((i) => i.id === activeTab)?.icon}{" "}
+            {SIDEBAR_ITEMS.find((i) => i.id === activeTab)?.label}
+          </div>
+
+          <div className="adm-topbar-actions">
+            <button className="btn btn-accent btn-sm" onClick={openAddModal}>
+              ➕ Add Listing
             </button>
-          </div>
-
-          {/* Products Table */}
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Category</th>
-                  <th>Price (ETB)</th>
-                  <th>Stock</th>
-                  <th>Condition</th>
-                  <th>Views</th>
-                  <th>Featured</th>
-                  <th>Seller</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.length > 0 ? (
-                  products.map((p) => (
-                    <tr key={p.id}>
-                      <td>
-                        <div className="table-product-cell">
-                          <div className="table-thumb-wrap">
-                            {p.image ? (
-                              <img src={p.image} alt={p.name} className="table-thumb" />
-                            ) : (
-                              <ProductArt art={p.art} color={p.color} tint={p.tint} />
-                            )}
-                          </div>
-                          <div>
-                            <Link to={`/product/${p.id}`} target="_blank" className="table-product-title">
-                              {p.name}
-                            </Link>
-                            <span className="table-sub">ID: {p.id}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="badge-cat">{p.category}</span>
-                      </td>
-                      <td>
-                        <strong>{money(p.price)}</strong>
-                        {p.negotiable && <span className="table-sub-tag">Neg</span>}
-                      </td>
-                      <td>
-                        <span className={`stock-indicator ${p.stock <= 2 ? "low" : "ok"}`}>
-                          {p.stock} units
-                        </span>
-                      </td>
-                      <td>{p.condition || "Brand New"}</td>
-                      <td>👁️ {p.views || 0}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className={`btn-featured-toggle ${p.featured ? "active" : ""}`}
-                          onClick={() => handleToggleFeatured(p)}
-                          title="Click to toggle featured status"
-                        >
-                          {p.featured ? "💎 Boosted" : "☆ Standard"}
-                        </button>
-                      </td>
-                      <td>
-                        <div>{p.seller?.name || "Seller"}</div>
-                        <a href={`tel:${p.seller?.phone}`} className="table-sub">
-                          {p.seller?.phone || "-"}
-                        </a>
-                      </td>
-                      <td>
-                        <div className="table-actions-row">
-                          <button
-                            type="button"
-                            className="btn-action-edit"
-                            onClick={() => openEditProductModal(p)}
-                            title="Edit product"
-                          >
-                            ✏️ Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-action-del"
-                            onClick={() => handleDeleteProduct(p.id, p.name)}
-                            title="Delete product"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="9" style={{ textAlign: "center", padding: "2rem" }}>
-                      {prodLoading ? "Loading listings…" : "No products found."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            <div className="adm-topbar-avatar">G</div>
           </div>
         </div>
-      )}
 
-      {/* ─── TAB 3: ORDERS & TRANSACTIONS (CRUD) ─── */}
-      {activeTab === "orders" && (
-        <div className="admin-tab-content">
-          {/* Order Search & Status Filters */}
-          <div className="admin-filter-bar">
-            <div className="filter-input-wrap">
-              <span>🔍</span>
-              <input
-                type="text"
-                placeholder="Search by Order ID, customer, email, or city…"
-                value={orderSearch}
-                onChange={(e) => setOrderSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && loadOrders()}
-              />
-            </div>
+        {/* Toast */}
+        {actionNotice && (
+          <div className="adm-toast">{actionNotice}</div>
+        )}
 
-            <div className="order-status-tabs">
-              {ORDER_STATUSES.map((st) => (
-                <button
-                  key={st.value}
-                  type="button"
-                  className={`status-tab-btn ${orderStatus === st.value ? "active" : ""}`}
-                  onClick={() => {
-                    setOrderStatus(st.value);
-                  }}
-                >
-                  {st.label}
-                </button>
-              ))}
-            </div>
+        {/* ── Content area ── */}
+        <div className="adm-content">
 
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={loadOrders}
-            >
-              Refresh
-            </button>
-          </div>
-
-          {/* Orders Table */}
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Order ID</th>
-                  <th>Customer Info</th>
-                  <th>Items Ordered</th>
-                  <th>Subtotal &bull; Shipping</th>
-                  <th>Total Amount</th>
-                  <th>Gateway / Ref</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.length > 0 ? (
-                  orders.map((o) => (
-                    <tr key={o.id}>
-                      <td>
-                        <strong>#{o.id}</strong>
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: "600" }}>{o.customer?.name}</div>
-                        <div className="table-sub">{o.customer?.email}</div>
-                        <div className="table-sub">📍 {o.customer?.city}</div>
-                      </td>
-                      <td>
-                        <div className="table-items-summary">
-                          {o.items?.map((item, idx) => (
-                            <div key={idx} className="item-summary-line">
-                              {item.qty}x {item.name}
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td>
-                        <div>Sub: {money(o.subtotal)}</div>
-                        <span className="table-sub">Ship: {money(o.shipping)}</span>
-                      </td>
-                      <td>
-                        <strong style={{ fontSize: "1.05rem", color: "var(--accent)" }}>
-                          {money(o.total)}
-                        </strong>
-                      </td>
-                      <td>
-                        <span className="badge-gateway">
-                          {o.paymentMethod || "telebirr"}
-                        </span>
-                        {o.paymentRef && (
-                          <div className="table-sub" title={o.paymentRef}>
-                            Ref: {o.paymentRef.slice(0, 10)}…
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        <select
-                          className={`status-select-inline ${o.status || "pending"}`}
-                          value={o.status || "pending"}
-                          onChange={(e) => handleQuickOrderStatus(o.id, e.target.value)}
-                        >
-                          <option value="pending">⏳ Pending</option>
-                          <option value="paid">✓ Paid</option>
-                          <option value="processing">⚙️ Processing</option>
-                          <option value="shipped">🚚 Shipped</option>
-                          <option value="delivered">📦 Delivered</option>
-                          <option value="cancelled">❌ Cancelled</option>
-                        </select>
-                      </td>
-                      <td>
-                        <span className="table-sub">
-                          {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : "-"}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="table-actions-row">
-                          <button
-                            type="button"
-                            className="btn-action-view"
-                            onClick={() => openOrderInspector(o)}
-                            title="Inspect full order details"
-                          >
-                            👁️ View
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-action-del"
-                            onClick={() => handleDeleteOrder(o.id)}
-                            title="Delete order"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="9" style={{ textAlign: "center", padding: "2rem" }}>
-                      {orderLoading ? "Loading orders…" : "No orders matching current filter."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ─── TAB 4: PAYMENT GATEWAYS & SETTINGS ─── */}
-      {activeTab === "gateways" && (
-        <div className="admin-tab-content">
-          <div className="gateways-overview-grid">
-            {/* Telebirr Card */}
-            <div className="gateway-admin-card">
-              <div className="gw-card-head">
-                <span className="gw-icon">📱</span>
+          {/* ════ DASHBOARD ════ */}
+          {activeTab === "dashboard" && (
+            <div className="adm-tab-body">
+              <div className="adm-section-head">
                 <div>
-                  <h3>Telebirr Gateway (ኢትዮ ቴሌኮም)</h3>
-                  <span className="gw-status-live">● Live &amp; Active</span>
+                  <h2>Overview</h2>
+                  <p>Real-time snapshot of your marketplace.</p>
                 </div>
-              </div>
-              <div className="gw-card-body">
-                <div className="gw-field-row">
-                  <span>Merchant / Phone Account:</span>
-                  <strong>092627366</strong>
-                </div>
-                <div className="gw-field-row">
-                  <span>Account Title:</span>
-                  <strong>Gedualpha Ecom (Telebirr Gateway)</strong>
-                </div>
-                <div className="gw-field-row">
-                  <span>USSD Payment Code:</span>
-                  <strong>*127#</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* CBE Birr Card */}
-            <div className="gateway-admin-card">
-              <div className="gw-card-head">
-                <span className="gw-icon">🏦</span>
-                <div>
-                  <h3>Commercial Bank of Ethiopia (CBE)</h3>
-                  <span className="gw-status-live">● Live &amp; Active</span>
-                </div>
-              </div>
-              <div className="gw-card-body">
-                <div className="gw-field-row">
-                  <span>Account Number:</span>
-                  <strong>1000254874705</strong>
-                </div>
-                <div className="gw-field-row">
-                  <span>Account Holder Name:</span>
-                  <strong>Gedualpha Ecom</strong>
-                </div>
-                <div className="gw-field-row">
-                  <span>Transfer Platform:</span>
-                  <strong>CBE Birr &amp; CBE Mobile Banking</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* Chapa Card */}
-            <div className="gateway-admin-card">
-              <div className="gw-card-head">
-                <span className="gw-icon">💳</span>
-                <div>
-                  <h3>Chapa Online Payment Gateway</h3>
-                  <span className="gw-status-live">● Integrated</span>
-                </div>
-              </div>
-              <div className="gw-card-body">
-                <div className="gw-field-row">
-                  <span>Currency:</span>
-                  <strong>ETB (Ethiopian Birr)</strong>
-                </div>
-                <div className="gw-field-row">
-                  <span>API Integration:</span>
-                  <strong>/api/payments/chapa/initialize</strong>
-                </div>
-                <div className="gw-field-row">
-                  <span>Supported Methods:</span>
-                  <strong>Telebirr, CBE, Awash, Cards</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── MODAL: ADD / EDIT PRODUCT ─── */}
-      {productModal.open && (
-        <div className="modal-scrim" onClick={() => setProductModal({ open: false, mode: "add", data: null })}>
-          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <h2>{productModal.mode === "add" ? "➕ Add New Marketplace Product" : "✏️ Edit Product Listing"}</h2>
-              <button
-                type="button"
-                className="close-btn"
-                onClick={() => setProductModal({ open: false, mode: "add", data: null })}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveProduct} className="admin-modal-form">
-              <div className="field">
-                <span>Item Title *</span>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Samsung Galaxy S24 Ultra 512GB"
-                  value={prodForm.name}
-                  onChange={(e) => setProdForm({ ...prodForm, name: e.target.value })}
-                />
+                <button className="btn btn-ghost btn-sm" onClick={loadStats}>↻ Refresh</button>
               </div>
 
-              <div className="fields-row">
-                <div className="field">
-                  <span>Category *</span>
-                  <select
-                    value={prodForm.category}
-                    onChange={(e) => setProdForm({ ...prodForm, category: e.target.value })}
-                  >
-                    {CATEGORIES.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.icon} {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="field">
-                  <span>Price (ETB) *</span>
-                  <input
-                    type="number"
-                    required
-                    placeholder="e.g. 135000"
-                    value={prodForm.price}
-                    onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })}
-                  />
-                </div>
-
-                <div className="field">
-                  <span>Stock Available *</span>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={prodForm.stock}
-                    onChange={(e) => setProdForm({ ...prodForm, stock: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="fields-row">
-                <div className="field">
-                  <span>Condition</span>
-                  <select
-                    value={prodForm.condition}
-                    onChange={(e) => setProdForm({ ...prodForm, condition: e.target.value })}
-                  >
-                    <option value="Brand New">Brand New</option>
-                    <option value="Like New">Like New</option>
-                    <option value="Used">Used</option>
-                    <option value="Finished">Finished</option>
-                  </select>
-                </div>
-
-                <label className="checkbox-field" style={{ alignSelf: "center", marginTop: "1rem" }}>
-                  <input
-                    type="checkbox"
-                    checked={prodForm.negotiable}
-                    onChange={(e) => setProdForm({ ...prodForm, negotiable: e.target.checked })}
-                  />
-                  <span>Negotiable</span>
-                </label>
-
-                <label className="checkbox-field" style={{ alignSelf: "center", marginTop: "1rem" }}>
-                  <input
-                    type="checkbox"
-                    checked={prodForm.featured}
-                    onChange={(e) => setProdForm({ ...prodForm, featured: e.target.checked })}
-                  />
-                  <span>💎 Diamond Boost / Featured</span>
-                </label>
-              </div>
-
-              {/* Image Upload in Modal */}
-              <div className="field">
-                <span>Product Image (Photo Upload / Browse)</span>
-                {prodForm.image ? (
-                  <div className="modal-image-preview">
-                    <img src={prodForm.image} alt="Preview" className="modal-preview-thumb" />
-                    <button
-                      type="button"
-                      className="btn-remove-photo"
-                      onClick={() => setProdForm({ ...prodForm, image: "" })}
-                    >
-                      Remove Photo
-                    </button>
+              {/* KPI grid */}
+              <div className="adm-kpi-grid">
+                {[
+                  { icon: "💵", label: "Total Revenue", value: stats ? money(stats.totalRevenue) : "…", sub: "All paid orders", bg: "#ecfdf5", color: "#059669" },
+                  { icon: "🛒", label: "Total Orders",   value: stats?.totalOrders ?? "…",   sub: `${stats?.statusCounts?.pending ?? 0} pending`, bg: "#eff6ff", color: "#2563eb" },
+                  { icon: "📦", label: "Active Listings",value: stats?.totalProducts ?? "…",  sub: stats?.lowStockCount ? `⚠️ ${stats.lowStockCount} low stock` : "All in stock", bg: "#fdf4ff", color: "#9333ea" },
+                  { icon: "👁️", label: "Product Views",  value: stats?.totalViews ?? "…",     sub: "Buyer impressions", bg: "#fffbeb", color: "#d97706" },
+                ].map((k) => (
+                  <div className="adm-kpi-card" key={k.label}>
+                    <div className="adm-kpi-icon" style={{ background: k.bg, color: k.color }}>{k.icon}</div>
+                    <div className="adm-kpi-body">
+                      <div className="adm-kpi-label">{k.label}</div>
+                      <div className="adm-kpi-val">{k.value}</div>
+                      <div className="adm-kpi-sub">{k.sub}</div>
+                    </div>
                   </div>
-                ) : (
-                  <div className="modal-upload-box">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      id="modal-file-input"
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleImageFile(e.target.files[0]);
-                        }
-                      }}
-                    />
-                    <label htmlFor="modal-file-input" className="btn btn-accent btn-sm" style={{ cursor: "pointer" }}>
-                      📁 Browse &amp; Upload Photo
-                    </label>
-                    <span className="fine" style={{ marginLeft: "0.5rem" }}>JPG, PNG, WebP supported</span>
-                  </div>
-                )}
+                ))}
               </div>
 
-              <div className="field">
-                <span>Description &amp; Specifications</span>
-                <textarea
-                  rows="3"
-                  placeholder="Key specs, warranty, accessories included…"
-                  value={prodForm.description}
-                  onChange={(e) => setProdForm({ ...prodForm, description: e.target.value })}
-                />
-              </div>
-
-              <div className="fields-row">
-                <div className="field">
-                  <span>Location City</span>
-                  <input
-                    type="text"
-                    value={prodForm.city}
-                    onChange={(e) => setProdForm({ ...prodForm, city: e.target.value })}
-                  />
-                </div>
-                <div className="field">
-                  <span>Subcity / Area</span>
-                  <input
-                    type="text"
-                    value={prodForm.subcity}
-                    onChange={(e) => setProdForm({ ...prodForm, subcity: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="fields-row">
-                <div className="field">
-                  <span>Seller Name</span>
-                  <input
-                    type="text"
-                    value={prodForm.sellerName}
-                    onChange={(e) => setProdForm({ ...prodForm, sellerName: e.target.value })}
-                  />
-                </div>
-                <div className="field">
-                  <span>Seller Phone</span>
-                  <input
-                    type="text"
-                    value={prodForm.sellerPhone}
-                    onChange={(e) => setProdForm({ ...prodForm, sellerPhone: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="modal-foot">
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => setProductModal({ open: false, mode: "add", data: null })}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-accent"
-                  disabled={modalLoading}
-                >
-                  {modalLoading ? "Saving…" : "💾 Save Product"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ─── MODAL: ORDER / TRANSACTION INSPECTOR ─── */}
-      {orderModal.open && orderModal.data && (
-        <div className="modal-scrim" onClick={() => setOrderModal({ open: false, data: null })}>
-          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <h2>Transaction Details — Order #{orderModal.data.id}</h2>
-              <button
-                type="button"
-                className="close-btn"
-                onClick={() => setOrderModal({ open: false, data: null })}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveOrderInspector} className="admin-modal-form">
-              <div className="order-inspector-grid">
-                {/* Customer Information */}
-                <div className="inspector-box">
-                  <h4>👤 Customer &amp; Delivery Address</h4>
-                  <p><strong>Name:</strong> {orderModal.data.customer?.name}</p>
-                  <p><strong>Email:</strong> {orderModal.data.customer?.email}</p>
-                  <p><strong>Address:</strong> {orderModal.data.customer?.address}</p>
-                  <p><strong>City / Postal:</strong> {orderModal.data.customer?.city}, {orderModal.data.customer?.postal}</p>
-                </div>
-
-                {/* Financial Breakdown */}
-                <div className="inspector-box">
-                  <h4>💵 Financial &amp; Payment Summary</h4>
-                  <p><strong>Subtotal:</strong> {money(orderModal.data.subtotal)}</p>
-                  <p><strong>Shipping:</strong> {money(orderModal.data.shipping)}</p>
-                  <p><strong>Grand Total:</strong> <span style={{ color: "var(--accent)", fontSize: "1.1rem", fontWeight: "800" }}>{money(orderModal.data.total)}</span></p>
-                  <p><strong>Gateway:</strong> {orderModal.data.paymentMethod || "telebirr"}</p>
-                </div>
-              </div>
-
-              {/* Order Items List */}
-              <div className="inspector-items-box">
-                <h4>📦 Line Items</h4>
-                <div className="inspector-items-list">
-                  {orderModal.data.items?.map((item, i) => (
-                    <div key={i} className="inspector-item-row">
-                      <span>{item.qty}x <strong>{item.name}</strong></span>
-                      <span>{money(item.price * item.qty)}</span>
+              {/* Status breakdown */}
+              <div className="adm-card">
+                <div className="adm-card-head"><h3>Orders by Status</h3></div>
+                <div className="adm-status-row">
+                  {ORDER_STATUSES.map((s) => (
+                    <div className={`adm-status-pill ${s}`} key={s}>
+                      <span>{STATUS_META[s].label}</span>
+                      <strong>{stats?.statusCounts?.[s] ?? 0}</strong>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Status and Notes Controls */}
-              <div className="fields-row">
-                <div className="field">
-                  <span>Update Order Status</span>
-                  <select
-                    value={orderModal.data.status || "pending"}
-                    onChange={(e) =>
-                      setOrderModal({
-                        ...orderModal,
-                        data: { ...orderModal.data, status: e.target.value },
-                      })
-                    }
-                  >
-                    <option value="pending">⏳ Pending (Awaiting payment verification)</option>
-                    <option value="paid">✓ Paid &amp; Verified</option>
-                    <option value="processing">⚙️ Processing / Packing</option>
-                    <option value="shipped">🚚 Shipped / Out for delivery</option>
-                    <option value="delivered">📦 Delivered to customer</option>
-                    <option value="cancelled">❌ Cancelled</option>
-                  </select>
+              {/* Recent orders + quick actions */}
+              <div className="adm-dual-grid">
+                <div className="adm-card">
+                  <div className="adm-card-head">
+                    <h3>Recent Orders</h3>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { setActiveTab("orders"); loadOrders(); }}>View All →</button>
+                  </div>
+                  {stats?.recentOrders?.length > 0 ? (
+                    <div className="adm-table-wrap">
+                      <table className="adm-table">
+                        <thead><tr>
+                          <th>Order</th><th>Customer</th><th>Amount</th><th>Status</th><th></th>
+                        </tr></thead>
+                        <tbody>
+                          {stats.recentOrders.map((o) => (
+                            <tr key={o.id}>
+                              <td><strong>#{o.id?.slice(0,8)}</strong></td>
+                              <td>
+                                <div style={{ fontWeight: 600 }}>{o.customer?.name}</div>
+                                <div className="adm-cell-sub">{o.customer?.city}</div>
+                              </td>
+                              <td><strong>{money(o.total)}</strong></td>
+                              <td><span className={`adm-badge-status ${o.status}`}>{o.status}</span></td>
+                              <td>
+                                <button className="adm-btn-view" onClick={() => setOrderModal({ open: true, data: o })}>View</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="adm-empty">No orders yet.</div>
+                  )}
                 </div>
 
-                <div className="field">
-                  <span>Payment Reference Code</span>
+                <div className="adm-card">
+                  <div className="adm-card-head"><h3>⚡ Quick Actions</h3></div>
+                  <div className="adm-quick-tiles">
+                    {[
+                      { icon: "➕", title: "Add New Listing",      sub: "Upload photos, set price & location", action: openAddModal },
+                      { icon: "📦", title: "Manage Products",       sub: "Edit stock, pricing, and categories",  action: () => { setActiveTab("products"); loadProducts(); } },
+                      { icon: "💳", title: "Process Orders",        sub: "Mark Telebirr & CBE payments as paid", action: () => { setActiveTab("orders"); loadOrders(); } },
+                    ].map((t) => (
+                      <button key={t.title} className="adm-quick-tile" onClick={t.action}>
+                        <span className="adm-quick-tile-icon">{t.icon}</span>
+                        <div>
+                          <strong>{t.title}</strong>
+                          <p>{t.sub}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {stats?.lowStockProducts?.length > 0 && (
+                    <div className="adm-low-stock">
+                      <h4>⚠️ Low Stock (≤ 3 left)</h4>
+                      {stats.lowStockProducts.map((p) => (
+                        <div key={p.id} className="adm-low-stock-row">
+                          <span>{p.name}</span>
+                          <strong style={{ color: "#dc2626" }}>{p.stock} left</strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ════ PRODUCTS ════ */}
+          {activeTab === "products" && (
+            <div className="adm-tab-body">
+              <div className="adm-section-head">
+                <div>
+                  <h2>Products & Listings</h2>
+                  <p>{productTotal} listings in the marketplace.</p>
+                </div>
+                <button className="btn btn-accent btn-sm" onClick={openAddModal}>➕ Add Product</button>
+              </div>
+
+              <div className="adm-filter-bar">
+                <div className="adm-search-wrap">
+                  <span>🔍</span>
                   <input
                     type="text"
-                    placeholder="e.g. TXN-TELEBIRR-82918"
-                    value={orderModal.data.paymentRef || ""}
-                    onChange={(e) =>
-                      setOrderModal({
-                        ...orderModal,
-                        data: { ...orderModal.data, paymentRef: e.target.value },
-                      })
-                    }
+                    placeholder="Search by title or ID…"
+                    value={prodSearch}
+                    onChange={(e) => setProdSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && loadProducts()}
                   />
+                </div>
+                <select value={prodCategory} onChange={(e) => setProdCategory(e.target.value)}>
+                  <option value="all">All Categories</option>
+                  {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.icon} {c.label}</option>)}
+                </select>
+                <button className="btn btn-ghost btn-sm" onClick={loadProducts}>Filter</button>
+              </div>
+
+              <div className="adm-table-wrap">
+                <table className="adm-table">
+                  <thead><tr>
+                    <th>Product</th><th>Category</th><th>Price</th><th>Stock</th>
+                    <th>Condition</th><th>Views</th><th>Featured</th><th>Actions</th>
+                  </tr></thead>
+                  <tbody>
+                    {prodLoading ? (
+                      <tr><td colSpan="8" className="adm-empty">Loading…</td></tr>
+                    ) : products.length === 0 ? (
+                      <tr><td colSpan="8" className="adm-empty">No products found.</td></tr>
+                    ) : products.map((p) => (
+                      <tr key={p.id}>
+                        <td>
+                          <div className="adm-product-cell">
+                            <div className="adm-thumb">
+                              {p.image
+                                ? <img src={p.image} alt={p.name} />
+                                : <ProductArt art={p.art} color={p.color} tint={p.tint} />}
+                            </div>
+                            <div>
+                              <Link to={`/product/${p.id}`} target="_blank" className="adm-product-name">{p.name}</Link>
+                              <span className="adm-cell-sub">ID: {p.id?.slice(0,18)}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td><span className="adm-badge-cat">{p.category}</span></td>
+                        <td>
+                          <strong>{money(p.price)}</strong>
+                          {p.negotiable && <span className="adm-neg-tag">Neg</span>}
+                        </td>
+                        <td>
+                          <span className={`adm-stock ${p.stock <= 2 ? "low" : "ok"}`}>{p.stock}</span>
+                        </td>
+                        <td className="adm-cell-sub">{p.condition}</td>
+                        <td className="adm-cell-sub">👁 {p.views || 0}</td>
+                        <td>
+                          <button
+                            className={`adm-featured-btn ${p.featured ? "on" : ""}`}
+                            onClick={() => handleToggleFeatured(p)}
+                          >
+                            {p.featured ? "💎 Boosted" : "☆ Standard"}
+                          </button>
+                        </td>
+                        <td>
+                          <div className="adm-row-actions">
+                            <button className="adm-btn-edit" onClick={() => openEditModal(p)}>✏️ Edit</button>
+                            <button className="adm-btn-del"  onClick={() => handleDeleteProduct(p.id, p.name)}>🗑</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ════ ORDERS ════ */}
+          {activeTab === "orders" && (
+            <div className="adm-tab-body">
+              <div className="adm-section-head">
+                <div>
+                  <h2>Orders & Transactions</h2>
+                  <p>{orderTotal} total orders placed.</p>
                 </div>
               </div>
 
+              <div className="adm-filter-bar">
+                <div className="adm-search-wrap">
+                  <span>🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search by order ID, customer, email…"
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && loadOrders()}
+                  />
+                </div>
+                <div className="adm-status-tabs">
+                  {["all", ...ORDER_STATUSES].map((s) => (
+                    <button
+                      key={s}
+                      className={`adm-status-tab ${orderStatus === s ? "active" : ""}`}
+                      onClick={() => { setOrderStatus(s); }}
+                      style={orderStatus === s && s !== "all" ? { background: STATUS_META[s]?.bg, color: STATUS_META[s]?.color, borderColor: STATUS_META[s]?.color } : {}}
+                    >
+                      {s === "all" ? "All" : STATUS_META[s].label}
+                    </button>
+                  ))}
+                </div>
+                <button className="btn btn-ghost btn-sm" onClick={loadOrders}>Filter</button>
+              </div>
+
+              <div className="adm-table-wrap">
+                <table className="adm-table">
+                  <thead><tr>
+                    <th>Order ID</th><th>Customer</th><th>Items</th>
+                    <th>Total</th><th>Gateway</th><th>Status</th><th>Date</th><th>Actions</th>
+                  </tr></thead>
+                  <tbody>
+                    {orderLoading ? (
+                      <tr><td colSpan="8" className="adm-empty">Loading…</td></tr>
+                    ) : orders.length === 0 ? (
+                      <tr><td colSpan="8" className="adm-empty">No orders found.</td></tr>
+                    ) : orders.map((o) => (
+                      <tr key={o.id}>
+                        <td><strong>#{o.id?.slice(0,10)}</strong></td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{o.customer?.name}</div>
+                          <div className="adm-cell-sub">{o.customer?.phone}</div>
+                        </td>
+                        <td>
+                          {o.items?.slice(0,2).map((it, i) => (
+                            <div key={i} className="adm-cell-sub">{it.name} ×{it.qty}</div>
+                          ))}
+                          {o.items?.length > 2 && <div className="adm-cell-sub">+{o.items.length - 2} more</div>}
+                        </td>
+                        <td><strong>{money(o.total)}</strong></td>
+                        <td><span className="adm-badge-gw">{o.paymentMethod || "—"}</span></td>
+                        <td>
+                          <select
+                            className={`adm-status-select ${o.status}`}
+                            value={o.status || "pending"}
+                            onChange={(e) => handleQuickOrderStatus(o.id, e.target.value)}
+                          >
+                            {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </td>
+                        <td className="adm-cell-sub">{o.createdAt ? new Date(o.createdAt).toLocaleDateString() : "—"}</td>
+                        <td>
+                          <div className="adm-row-actions">
+                            <button className="adm-btn-view" onClick={() => setOrderModal({ open: true, data: { ...o } })}>View</button>
+                            <button className="adm-btn-del"  onClick={() => handleDeleteOrder(o.id)}>🗑</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ════ GATEWAYS ════ */}
+          {activeTab === "gateways" && (
+            <div className="adm-tab-body">
+              <div className="adm-section-head">
+                <div>
+                  <h2>Payment Gateways</h2>
+                  <p>Active payment methods configured for this store.</p>
+                </div>
+              </div>
+
+              <div className="adm-gw-grid">
+                {[
+                  { icon: "📱", name: "Telebirr", provider: "Ethio Telecom",  status: "Live", color: "#16a34a",
+                    fields: [["Merchant Number", "+251 912 627 366"], ["Account Name", "Gedualpha Store"], ["Reference", "GEDUALPHA"]] },
+                  { icon: "🏦", name: "CBE Birr",  provider: "Commercial Bank", status: "Live", color: "#2563eb",
+                    fields: [["Account No.", "1000581512308"], ["Account Name", "Gedualpha PLC"], ["Branch", "Bole Branch"]] },
+                  { icon: "💳", name: "Chapa",     provider: "Chapa Payment",   status: "Live", color: "#7c3aed",
+                    fields: [["API Status", "Connected"], ["Mode", "Production"], ["Currency", "ETB"]] },
+                ].map((gw) => (
+                  <div className="adm-gw-card" key={gw.name}>
+                    <div className="adm-gw-head">
+                      <span className="adm-gw-icon">{gw.icon}</span>
+                      <div>
+                        <div className="adm-gw-name">{gw.name}</div>
+                        <div className="adm-gw-provider">{gw.provider}</div>
+                      </div>
+                      <span className="adm-gw-live" style={{ background: `${gw.color}18`, color: gw.color }}>
+                        ● {gw.status}
+                      </span>
+                    </div>
+                    <div className="adm-gw-fields">
+                      {gw.fields.map(([label, val]) => (
+                        <div className="adm-gw-field" key={label}>
+                          <span>{label}</span>
+                          <strong>{val}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>{/* end adm-content */}
+      </div>{/* end adm-main */}
+
+
+      {/* ════ PRODUCT MODAL ════ */}
+      {productModal.open && (
+        <div className="modal-scrim" onClick={() => setProductModal({ open: false, mode: "add", data: null })}>
+          <div className="adm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="adm-modal-head">
+              <h2>{productModal.mode === "add" ? "➕ Add New Listing" : "✏️ Edit Listing"}</h2>
+              <button className="close-btn" onClick={() => setProductModal({ open: false, mode: "add", data: null })}>✕</button>
+            </div>
+
+            <form className="adm-modal-form" onSubmit={handleSaveProduct}>
+              {/* Title */}
               <div className="field">
-                <span>Internal Admin Notes</span>
+                <span>Item Title *</span>
+                <input value={prodForm.name} onChange={(e) => setProdForm((p) => ({ ...p, name: e.target.value }))} required placeholder="e.g. iPhone 14 Pro Max 256GB" />
+              </div>
+
+              {/* Category + Condition */}
+              <div className="fields-row">
+                <div className="field">
+                  <span>Category *</span>
+                  <select value={prodForm.category} onChange={(e) => setProdForm((p) => ({ ...p, category: e.target.value }))}>
+                    {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.icon} {c.label}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <span>Condition</span>
+                  <select value={prodForm.condition} onChange={(e) => setProdForm((p) => ({ ...p, condition: e.target.value }))}>
+                    {["Brand New","Like New","Used","Under building","Finished"].map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Price + Stock */}
+              <div className="fields-row">
+                <div className="field">
+                  <span>Price (ETB) *</span>
+                  <input type="number" min="1" value={prodForm.price} onChange={(e) => setProdForm((p) => ({ ...p, price: e.target.value }))} required placeholder="e.g. 85000" />
+                </div>
+                <div className="field">
+                  <span>Stock Qty</span>
+                  <input type="number" min="0" value={prodForm.stock} onChange={(e) => setProdForm((p) => ({ ...p, stock: e.target.value }))} />
+                </div>
+              </div>
+
+              {/* Checkboxes */}
+              <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+                <label className="checkbox-field">
+                  <input type="checkbox" checked={prodForm.negotiable} onChange={(e) => setProdForm((p) => ({ ...p, negotiable: e.target.checked }))} />
+                  Price Negotiable
+                </label>
+                <label className="checkbox-field">
+                  <input type="checkbox" checked={prodForm.featured} onChange={(e) => setProdForm((p) => ({ ...p, featured: e.target.checked }))} />
+                  💎 Featured / Boosted
+                </label>
+              </div>
+
+              {/* Image upload */}
+              <div className="field">
+                <span>Product Photo</span>
+                <div className="adm-upload-box">
+                  {prodForm.image ? (
+                    <div className="adm-upload-preview">
+                      <img src={prodForm.image} alt="preview" />
+                      <button type="button" className="adm-upload-remove" onClick={() => setProdForm((p) => ({ ...p, image: "" }))}>✕ Remove</button>
+                    </div>
+                  ) : (
+                    <label className="adm-upload-label">
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => handleImageFile(e.target.files?.[0])} />
+                      <span className="adm-upload-icon">📷</span>
+                      <span>Click to upload photo</span>
+                      <small>JPEG/PNG, max 5 MB</small>
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="field">
+                <span>Description *</span>
                 <textarea
-                  rows="2"
-                  placeholder="Notes about verification, courier phone, tracking number…"
-                  value={orderModal.data.notes || ""}
-                  onChange={(e) =>
-                    setOrderModal({
-                      ...orderModal,
-                      data: { ...orderModal.data, notes: e.target.value },
-                    })
-                  }
+                  rows={3} required
+                  value={prodForm.description}
+                  onChange={(e) => setProdForm((p) => ({ ...p, description: e.target.value }))}
+                  placeholder="Describe the item, specifications, condition details…"
+                  style={{ padding: "0.75rem 1rem", borderRadius: "var(--radius-md)", border: "1.5px solid var(--border-card)", background: "var(--bg)", color: "var(--text-primary)", resize: "vertical", fontFamily: "inherit", fontSize: "0.9375rem" }}
                 />
               </div>
 
-              <div className="modal-foot">
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => setOrderModal({ open: false, data: null })}
-                >
-                  Close
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-accent"
-                  disabled={modalLoading}
-                >
-                  {modalLoading ? "Saving…" : "💾 Update Order Status"}
+              {/* Location */}
+              <div className="fields-row">
+                <div className="field">
+                  <span>City</span>
+                  <input value={prodForm.city} onChange={(e) => setProdForm((p) => ({ ...p, city: e.target.value }))} placeholder="Addis Ababa" />
+                </div>
+                <div className="field">
+                  <span>Subcity / Area</span>
+                  <input value={prodForm.subcity} onChange={(e) => setProdForm((p) => ({ ...p, subcity: e.target.value }))} placeholder="Bole" />
+                </div>
+              </div>
+
+              {/* Seller */}
+              <div className="fields-row">
+                <div className="field">
+                  <span>Seller Name</span>
+                  <input value={prodForm.sellerName} onChange={(e) => setProdForm((p) => ({ ...p, sellerName: e.target.value }))} />
+                </div>
+                <div className="field">
+                  <span>Seller Phone</span>
+                  <input value={prodForm.sellerPhone} onChange={(e) => setProdForm((p) => ({ ...p, sellerPhone: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="adm-modal-foot">
+                <button type="button" className="btn btn-ghost" onClick={() => setProductModal({ open: false, mode: "add", data: null })}>Cancel</button>
+                <button type="submit" className="btn btn-accent" disabled={modalLoading}>
+                  {modalLoading ? "Saving…" : productModal.mode === "add" ? "➕ Create Listing" : "✓ Save Changes"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* ════ ORDER INSPECTOR MODAL ════ */}
+      {orderModal.open && orderModal.data && (
+        <div className="modal-scrim" onClick={() => setOrderModal({ open: false, data: null })}>
+          <div className="adm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="adm-modal-head">
+              <h2>Order #{orderModal.data.id?.slice(0, 12)}</h2>
+              <button className="close-btn" onClick={() => setOrderModal({ open: false, data: null })}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveOrder} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="order-inspector-grid">
+                <div className="inspector-box">
+                  <h4>Customer</h4>
+                  <p>{orderModal.data.customer?.name}<br />{orderModal.data.customer?.phone}<br />{orderModal.data.customer?.email}</p>
+                </div>
+                <div className="inspector-box">
+                  <h4>Financials</h4>
+                  <p>
+                    Subtotal: {money(orderModal.data.subtotal)}<br />
+                    Shipping: {money(orderModal.data.shipping)}<br />
+                    <strong>Total: {money(orderModal.data.total)}</strong>
+                  </p>
+                </div>
+              </div>
+
+              {orderModal.data.items?.length > 0 && (
+                <div className="inspector-items-box">
+                  <h4>Items</h4>
+                  <div className="inspector-items-list">
+                    {orderModal.data.items.map((it, i) => (
+                      <div key={i} className="inspector-item-row">
+                        <span>{it.name} ×{it.qty}</span>
+                        <strong>{money(it.price * it.qty)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="fields-row">
+                <div className="field">
+                  <span>Order Status</span>
+                  <select
+                    value={orderModal.data.status || "pending"}
+                    onChange={(e) => setOrderModal((m) => ({ ...m, data: { ...m.data, status: e.target.value } }))}
+                  >
+                    {ORDER_STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <span>Payment Ref</span>
+                  <input
+                    value={orderModal.data.paymentRef || ""}
+                    onChange={(e) => setOrderModal((m) => ({ ...m, data: { ...m.data, paymentRef: e.target.value } }))}
+                    placeholder="Transaction reference…"
+                  />
+                </div>
+              </div>
+
+              <div className="field">
+                <span>Notes</span>
+                <textarea
+                  rows={2}
+                  value={orderModal.data.notes || ""}
+                  onChange={(e) => setOrderModal((m) => ({ ...m, data: { ...m.data, notes: e.target.value } }))}
+                  placeholder="Internal notes…"
+                  style={{ padding: "0.75rem 1rem", borderRadius: "var(--radius-md)", border: "1.5px solid var(--border-card)", background: "var(--bg)", color: "var(--text-primary)", resize: "vertical", fontFamily: "inherit", fontSize: "0.9375rem" }}
+                />
+              </div>
+
+              <div className="adm-modal-foot">
+                <button type="button" className="btn btn-ghost" onClick={() => setOrderModal({ open: false, data: null })}>Close</button>
+                <button type="submit" className="btn btn-accent" disabled={modalLoading}>
+                  {modalLoading ? "Saving…" : "✓ Save Order"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
