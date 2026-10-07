@@ -195,31 +195,33 @@ export default function Header() {
                 </div>
               )}
 
-              {/* ── Admin button (separate from user auth) ── */}
-              {isAdmin ? (
-                <div className="admin-user-wrap" onClick={(e) => e.stopPropagation()}>
-                  <button className="admin-avatar-btn" onClick={() => setAdminMenuOpen((v) => !v)}>
-                    <span className="admin-avatar-icon">🛡️</span>
-                    <span className="admin-avatar-label">Admin</span>
-                    <ChevronDown />
+              {/* ── Admin button — only visible when no regular user is logged in ── */}
+              {!user && (
+                isAdmin ? (
+                  <div className="admin-user-wrap" onClick={(e) => e.stopPropagation()}>
+                    <button className="admin-avatar-btn" onClick={() => setAdminMenuOpen((v) => !v)}>
+                      <span className="admin-avatar-icon">🛡️</span>
+                      <span className="admin-avatar-label">Admin</span>
+                      <ChevronDown />
+                    </button>
+                    {adminMenuOpen && (
+                      <div className="admin-user-menu">
+                        <div className="admin-user-menu-header">
+                          <div className="aum-avatar">G</div>
+                          <div><div className="aum-name">Gedualpha Admin</div><div className="aum-role">Store Manager</div></div>
+                        </div>
+                        <div className="admin-user-menu-items">
+                          <Link to="/admin" className="aum-item" onClick={() => setAdminMenuOpen(false)}><ShieldIcon /> Dashboard</Link>
+                          <button className="aum-item aum-item-danger" onClick={() => { setAdminAuth(false); setIsAdmin(false); setAdminMenuOpen(false); navigate("/"); }}><LogoutIcon /> Sign Out</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button className="admin-login-btn" onClick={() => { setAdminErr(""); setAdminPw(""); setShowAdminPw(false); setAdminLoginOpen(true); }} title="Admin login">
+                    <ShieldIcon /><span>Admin</span>
                   </button>
-                  {adminMenuOpen && (
-                    <div className="admin-user-menu">
-                      <div className="admin-user-menu-header">
-                        <div className="aum-avatar">G</div>
-                        <div><div className="aum-name">Gedualpha Admin</div><div className="aum-role">Store Manager</div></div>
-                      </div>
-                      <div className="admin-user-menu-items">
-                        <Link to="/admin" className="aum-item" onClick={() => setAdminMenuOpen(false)}><ShieldIcon /> Dashboard</Link>
-                        <button className="aum-item aum-item-danger" onClick={() => { setAdminAuth(false); setIsAdmin(false); setAdminMenuOpen(false); navigate("/"); }}><LogoutIcon /> Sign Out</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <button className="admin-login-btn" onClick={() => { setAdminErr(""); setAdminPw(""); setShowAdminPw(false); setAdminLoginOpen(true); }} title="Admin login">
-                  <ShieldIcon /><span>Admin</span>
-                </button>
+                )
               )}
 
               {/* Cart */}
