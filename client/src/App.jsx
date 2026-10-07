@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
+import { UserProvider } from "./UserContext.jsx";
 import Header from "./components/Header.jsx";
 import CartDrawer from "./components/CartDrawer.jsx";
 import Footer from "./components/Footer.jsx";
@@ -21,15 +22,14 @@ function NotFound() {
 }
 
 export default function App() {
-  // Persist dark mode preference
   useEffect(() => {
     const saved = localStorage.getItem("gedualpha-theme");
     if (saved === "dark") document.documentElement.classList.add("dark");
   }, []);
 
   return (
-    <>
-      <div className="announce">🇪🇹 Addis Ababa &amp; Ethiopia’s Trusted Marketplace — Post Ads for Free &bull; Pay with Telebirr &amp; CBE Birr</div>
+    <UserProvider>
+      <div className="announce">🇪🇹 Addis Ababa &amp; Ethiopia's Trusted Marketplace — Post Ads for Free &bull; Pay with Telebirr &amp; CBE Birr</div>
       <Header />
       <main>
         <Routes>
@@ -43,6 +43,6 @@ export default function App() {
       </main>
       <CartDrawer />
       <Footer />
-    </>
+    </UserProvider>
   );
 }

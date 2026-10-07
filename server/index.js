@@ -9,6 +9,7 @@ import { connectDB } from "./db.js";
 import Product from "./models/Product.js";
 import Order from "./models/Order.js";
 import PostingPayment from "./models/PostingPayment.js";
+import User, { hashPassword } from "./models/User.js";
 
 dotenv.config();
 dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), ".env") });
@@ -51,6 +52,107 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Serve built React frontend
 app.use(express.static(CLIENT_DIST));
+
+// ─── User Auth ───────────────────────────────────────────────────────────────
+
+// POST /api/auth/register
+app.post("/api/auth/register", requireDB, async (req, res) => {
+  try {
+    const { name = "", email = "", phone = "", password = "", role = "buyer", agreedTerms = false } = req.body;
+
+    const errs = {};
+    if (!String(name).trim())                                       errs.name     = "Full name is required";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) errs.email    = "Enter a valid email address";
+    if (!String(password).trim() || String(password).length < 6)   errs.password = "Password must be at least 6 characters";
+    if (!["buyer","seller","business"].includes(role))              errs.role     = "Select a valid role";
+    if (!agreedTerms)                                               errs.terms    = "You must agree to Terms & Conditions";
+
+    if (Object.keys(errs).length) return res.status(400).json({ errors: errs });
+
+    const existing = await User.findOne({ email: String(email).trim().toLowerCase() });
+    if (existing) return res.status(409).json({ errors: { email: "An account with this email already exists." } });
+
+    const newUser = await User.create({
+      _id: crypto.randomUUID(),
+      name: String(name).trim(),
+      email: String(email).trim().toLowerCase(),
+      phone: String(phone || "").trim(),
+      password: hashPassword(String(password)),
+      role,
+      agreedTerms: Boolean(agreedTerms),
+      verified: false,
+    });
+
+    const token = Buffer.from(JSON.stringify({ id: newUser._id, role: newUser.role, ts: Date.now() })).toString("base64");
+
+    res.status(201).json({
+      token,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
+        role: newUser.role,
+      },
+    });
+  } catch (err) {
+    console.error("Register error:", err.message);
+    res.status(500).json({ error: "Registration failed: " + err.message });
+  }
+});
+
+// POST /api/auth/login
+app.post("/api/auth/login", requireDB, async (req, res) => {
+  try {
+    const { email = "", password = "" } = req.body;
+
+    if (!email || !password) return res.status(400).json({ errors: { form: "Email and password are required." } });
+
+    const user = await User.findOne({ email: String(email).trim().toLowerCase() });
+    if (!user) return res.status(401).json({ errors: { email: "No account found with this email." } });
+
+    if (user.password !== hashPassword(String(password))) {
+      return res.status(401).json({ errors: { password: "Incorrect password." } });
+    }
+
+    const token = Buffer.from(JSON.stringify({ id: user._id, role: user.role, ts: Date.now() })).toString("base64");
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error("Login error:", err.message);
+    res.status(500).json({ error: "Login failed: " + err.message });
+  }
+});
+
+// GET /api/auth/me — verify token, return user profile
+app.get("/api/auth/me", requireDB, async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (!token) return res.status(401).json({ error: "No token provided" });
+
+    let payload;
+    try { payload = JSON.parse(Buffer.from(token, "base64").toString("utf8")); }
+    catch { return res.status(401).json({ error: "Invalid token" }); }
+
+    const user = await User.findById(payload.id).lean();
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const { _id, __v, password: _pw, ...rest } = user;
+    res.json({ user: { id: _id, ...rest } });
+  } catch (err) {
+    res.status(500).json({ error: "Auth check failed: " + err.message });
+  }
+});
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {

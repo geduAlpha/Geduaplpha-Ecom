@@ -31,6 +31,11 @@ export const api = {
   categories: (signal) => request("/categories", { signal }),
   postingPlans: (signal) => request("/posting-plans", { signal }),
   submitListing: (body) => request("/listing-payment", { method: "POST", body: JSON.stringify(body) }),
+
+  // User auth
+  authRegister: (body)  => request("/auth/register", { method: "POST", body: JSON.stringify(body) }),
+  authLogin:    (body)  => request("/auth/login",    { method: "POST", body: JSON.stringify(body) }),
+  authMe:       (token) => request("/auth/me", { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }),
   createOrder: (body) => request("/orders", { method: "POST", body: JSON.stringify(body) }),
   paymentConfig: (signal) => request("/payments/config", { signal }),
   initializeChapa: (body) => request("/payments/chapa/initialize", { method: "POST", body: JSON.stringify(body) }),
