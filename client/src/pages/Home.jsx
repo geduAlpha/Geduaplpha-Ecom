@@ -90,6 +90,17 @@ export default function Home() {
 
   const q = searchParams.get("q") || "";
 
+  // Sync state when searchParams change in URL
+  useEffect(() => {
+    setCategory(searchParams.get("category") || "all");
+    setCity(searchParams.get("city") || "all");
+    setCondition(searchParams.get("condition") || "all");
+    setMinPrice(searchParams.get("minPrice") || "");
+    setMaxPrice(searchParams.get("maxPrice") || "");
+    setSort(searchParams.get("sort") || "featured");
+    setPage(1);
+  }, [searchParams]);
+
   useEffect(() => {
     const ac = new AbortController();
     api.locations(ac.signal)
@@ -104,7 +115,7 @@ export default function Home() {
 
     api
       .products(
-        { q, category, city, condition, minPrice, maxPrice, sort, page, limit: 12 },
+        { q, category, city, condition, minPrice, maxPrice, sort, page, limit: 48 },
         controller.signal
       )
       .then((d) => {
@@ -120,8 +131,20 @@ export default function Home() {
 
   useEffect(load, [load]);
 
-  const setCategory_ = (v) => { setCategory(v); setPage(1); };
-  const setCity_ = (v) => { setCity(v); setPage(1); };
+  const setCategory_ = (v) => {
+    setCategory(v);
+    setPage(1);
+    const p = new URLSearchParams(searchParams);
+    if (v === "all") p.delete("category"); else p.set("category", v);
+    setSearchParams(p);
+  };
+  const setCity_ = (v) => {
+    setCity(v);
+    setPage(1);
+    const p = new URLSearchParams(searchParams);
+    if (v === "all") p.delete("city"); else p.set("city", v);
+    setSearchParams(p);
+  };
   const setSort_ = (v) => { setSort(v); setPage(1); };
   const setCondition_ = (v) => { setCondition(v); setPage(1); };
 

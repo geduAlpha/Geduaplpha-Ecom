@@ -66,7 +66,7 @@ export default function Header() {
   const [locModalOpen, setLocModalOpen] = useState(false);
   const [locations, setLocations] = useState([]);
   const [selectedCity, setSelectedCity] = useState(
-    localStorage.getItem("gedualpha-city") || searchParams.get("city") || "Addis Ababa"
+    searchParams.get("city") || localStorage.getItem("gedualpha-city") || "All Ethiopia"
   );
 
   useEffect(() => {
