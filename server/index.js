@@ -10,13 +10,14 @@ import Product from "./models/Product.js";
 import Order from "./models/Order.js";
 
 dotenv.config();
+dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), ".env") });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const CLIENT_DIST = path.join(__dirname, "../client/dist");
 
 const app = express();
-const PORT = parseInt(process.env.PORT, 10) || 8000;
+const PORT = parseInt(process.env.PORT, 10) || 4000;
 const FREE_SHIPPING_OVER = 6000; // cents
 const FLAT_SHIPPING = 599;       // cents
 
@@ -151,7 +152,7 @@ app.post("/api/orders", async (req, res) => {
         city:    customer.city.trim(),
         postal:  customer.postal.trim(),
       },
-      items,   // embedded in the order document
+      items: lines,   // embedded in the order document
       subtotal,
       shipping,
       total: subtotal + shipping,

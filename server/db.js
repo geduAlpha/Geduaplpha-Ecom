@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 dotenv.config();
+dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), ".env") });
 
 const uri =
   process.env.MONGODB_URI ||
