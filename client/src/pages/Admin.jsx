@@ -701,121 +701,227 @@ export default function Admin() {
       {/* ════ PRODUCT MODAL ════ */}
       {productModal.open && (
         <div className="modal-scrim" onClick={() => setProductModal({ open: false, mode: "add", data: null })}>
-          <div className="adm-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="adm-modal-head">
-              <h2>{productModal.mode === "add" ? "➕ Add New Listing" : "✏️ Edit Listing"}</h2>
-              <button className="close-btn" onClick={() => setProductModal({ open: false, mode: "add", data: null })}>✕</button>
+          <div className="apm-modal" onClick={(e) => e.stopPropagation()}>
+
+            {/* ── Header ── */}
+            <div className="apm-header">
+              <div className="apm-header-left">
+                <div className="apm-header-icon">
+                  {productModal.mode === "add" ? "📦" : "✏️"}
+                </div>
+                <div>
+                  <h2 className="apm-title">
+                    {productModal.mode === "add" ? "Submit a Product" : "Edit Listing"}
+                  </h2>
+                  <p className="apm-subtitle">
+                    {productModal.mode === "add"
+                      ? "Fill in the details below to add a new listing"
+                      : "Update the product information below"}
+                  </p>
+                </div>
+              </div>
+              <button className="apm-close" onClick={() => setProductModal({ open: false, mode: "add", data: null })} aria-label="Close">✕</button>
             </div>
 
-            <form className="adm-modal-form" onSubmit={handleSaveProduct}>
-              {/* Title */}
-              <div className="field">
-                <span>Item Title *</span>
-                <input value={prodForm.name} onChange={(e) => setProdForm((p) => ({ ...p, name: e.target.value }))} required placeholder="e.g. iPhone 14 Pro Max 256GB" />
-              </div>
+            <form className="apm-form" onSubmit={handleSaveProduct} noValidate>
 
-              {/* Category + Condition */}
-              <div className="fields-row">
-                <div className="field">
-                  <span>Category *</span>
-                  <select value={prodForm.category} onChange={(e) => setProdForm((p) => ({ ...p, category: e.target.value }))}>
-                    {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.icon} {c.label}</option>)}
-                  </select>
-                </div>
-                <div className="field">
-                  <span>Condition</span>
-                  <select value={prodForm.condition} onChange={(e) => setProdForm((p) => ({ ...p, condition: e.target.value }))}>
-                    {["Brand New","Like New","Used","Under building","Finished"].map((c) => <option key={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Price + Stock */}
-              <div className="fields-row">
-                <div className="field">
-                  <span>Price (ETB) *</span>
-                  <input type="number" min="1" value={prodForm.price} onChange={(e) => setProdForm((p) => ({ ...p, price: e.target.value }))} required placeholder="e.g. 85000" />
-                </div>
-                <div className="field">
-                  <span>Stock Qty</span>
-                  <input type="number" min="0" value={prodForm.stock} onChange={(e) => setProdForm((p) => ({ ...p, stock: e.target.value }))} />
-                </div>
-              </div>
-
-              {/* Checkboxes */}
-              <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-                <label className="checkbox-field">
-                  <input type="checkbox" checked={prodForm.negotiable} onChange={(e) => setProdForm((p) => ({ ...p, negotiable: e.target.checked }))} />
-                  Price Negotiable
-                </label>
-                <label className="checkbox-field">
-                  <input type="checkbox" checked={prodForm.featured} onChange={(e) => setProdForm((p) => ({ ...p, featured: e.target.checked }))} />
-                  💎 Featured / Boosted
-                </label>
-              </div>
-
-              {/* Image upload */}
-              <div className="field">
-                <span>Product Photo</span>
-                <div className="adm-upload-box">
-                  {prodForm.image ? (
-                    <div className="adm-upload-preview">
-                      <img src={prodForm.image} alt="preview" />
-                      <button type="button" className="adm-upload-remove" onClick={() => setProdForm((p) => ({ ...p, image: "" }))}>✕ Remove</button>
-                    </div>
-                  ) : (
-                    <label className="adm-upload-label">
-                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => handleImageFile(e.target.files?.[0])} />
-                      <span className="adm-upload-icon">📷</span>
-                      <span>Click to upload photo</span>
-                      <small>JPEG/PNG, max 5 MB</small>
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="field">
-                <span>Description *</span>
-                <textarea
-                  rows={3} required
-                  value={prodForm.description}
-                  onChange={(e) => setProdForm((p) => ({ ...p, description: e.target.value }))}
-                  placeholder="Describe the item, specifications, condition details…"
-                  style={{ padding: "0.75rem 1rem", borderRadius: "var(--radius-md)", border: "1.5px solid var(--border-card)", background: "var(--bg)", color: "var(--text-primary)", resize: "vertical", fontFamily: "inherit", fontSize: "0.9375rem" }}
+              {/* ── Product Name ── */}
+              <div className="apm-field">
+                <label className="apm-label">Product Name <span className="apm-req">*</span></label>
+                <input
+                  className="apm-input"
+                  type="text"
+                  placeholder="e.g. iPhone 14 Pro Max 256GB"
+                  value={prodForm.name}
+                  onChange={(e) => setProdForm((p) => ({ ...p, name: e.target.value }))}
+                  required
                 />
               </div>
 
-              {/* Location */}
-              <div className="fields-row">
-                <div className="field">
-                  <span>City</span>
-                  <input value={prodForm.city} onChange={(e) => setProdForm((p) => ({ ...p, city: e.target.value }))} placeholder="Addis Ababa" />
-                </div>
-                <div className="field">
-                  <span>Subcity / Area</span>
-                  <input value={prodForm.subcity} onChange={(e) => setProdForm((p) => ({ ...p, subcity: e.target.value }))} placeholder="Bole" />
-                </div>
-              </div>
-
-              {/* Seller */}
-              <div className="fields-row">
-                <div className="field">
-                  <span>Seller Name</span>
-                  <input value={prodForm.sellerName} onChange={(e) => setProdForm((p) => ({ ...p, sellerName: e.target.value }))} />
-                </div>
-                <div className="field">
-                  <span>Seller Phone</span>
-                  <input value={prodForm.sellerPhone} onChange={(e) => setProdForm((p) => ({ ...p, sellerPhone: e.target.value }))} />
+              {/* ── Product Category ── */}
+              <div className="apm-field">
+                <label className="apm-label">Product Category <span className="apm-req">*</span></label>
+                <div className="apm-select-wrap">
+                  <select
+                    className="apm-select"
+                    value={prodForm.category}
+                    onChange={(e) => setProdForm((p) => ({ ...p, category: e.target.value }))}
+                  >
+                    <option value="" disabled>Please Select</option>
+                    {CATEGORIES.map((c) => (
+                      <option key={c.value} value={c.value}>{c.icon} {c.label}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              <div className="adm-modal-foot">
-                <button type="button" className="btn btn-ghost" onClick={() => setProductModal({ open: false, mode: "add", data: null })}>Cancel</button>
-                <button type="submit" className="btn btn-accent" disabled={modalLoading}>
-                  {modalLoading ? "Saving…" : productModal.mode === "add" ? "➕ Create Listing" : "✓ Save Changes"}
-                </button>
+              {/* ── Product Freshness (radio) ── */}
+              <div className="apm-field">
+                <label className="apm-label">Product Freshness</label>
+                <div className="apm-radio-group">
+                  {["Brand New", "Second Hand", "Refurbished", "Under building", "Finished"].map((cond) => (
+                    <label key={cond} className={`apm-radio-card ${prodForm.condition === cond ? "active" : ""}`}>
+                      <input
+                        type="radio"
+                        name="condition"
+                        value={cond}
+                        checked={prodForm.condition === cond}
+                        onChange={() => setProdForm((p) => ({ ...p, condition: cond }))}
+                      />
+                      <span className="apm-radio-dot" />
+                      <span>{cond}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
+
+              {/* ── Image of Product ── */}
+              <div className="apm-field">
+                <label className="apm-label">Image of Product</label>
+                {prodForm.image ? (
+                  <div className="apm-image-preview">
+                    <img src={prodForm.image} alt="Product preview" />
+                    <div className="apm-image-overlay">
+                      <span className="apm-image-ready">✓ Image Ready</span>
+                      <button
+                        type="button"
+                        className="apm-image-remove"
+                        onClick={() => setProdForm((p) => ({ ...p, image: "" }))}
+                      >
+                        🗑 Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="apm-dropzone">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => handleImageFile(e.target.files?.[0])}
+                    />
+                    <div className="apm-dropzone-inner">
+                      <svg className="apm-upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="16 16 12 12 8 16"/>
+                        <line x1="12" y1="12" x2="12" y2="21"/>
+                        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+                      </svg>
+                      <span className="apm-dropzone-title">Upload a File</span>
+                      <span className="apm-dropzone-sub">Drag and drop files here</span>
+                    </div>
+                  </label>
+                )}
+              </div>
+
+              {/* ── Additional Description ── */}
+              <div className="apm-field">
+                <label className="apm-label">Additional Description <span className="apm-req">*</span></label>
+                <textarea
+                  className="apm-textarea"
+                  rows={4}
+                  placeholder="Describe specifications, warranty, reason for selling, any defects…"
+                  value={prodForm.description}
+                  onChange={(e) => setProdForm((p) => ({ ...p, description: e.target.value }))}
+                  required
+                />
+              </div>
+
+              {/* ── Product Price ── */}
+              <div className="apm-field">
+                <label className="apm-label">Product Price (ETB) <span className="apm-req">*</span></label>
+                <div className="apm-price-wrap">
+                  <span className="apm-price-prefix">Br</span>
+                  <input
+                    className="apm-input apm-input--price"
+                    type="number"
+                    min="1"
+                    placeholder="ex: 85,000"
+                    value={prodForm.price}
+                    onChange={(e) => setProdForm((p) => ({ ...p, price: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* ── Comments / Notes row ── */}
+              <div className="apm-row">
+                <div className="apm-field">
+                  <label className="apm-label">Stock Qty</label>
+                  <input
+                    className="apm-input"
+                    type="number"
+                    min="0"
+                    value={prodForm.stock}
+                    onChange={(e) => setProdForm((p) => ({ ...p, stock: e.target.value }))}
+                  />
+                </div>
+                <div className="apm-field">
+                  <label className="apm-label">City</label>
+                  <input
+                    className="apm-input"
+                    placeholder="Addis Ababa"
+                    value={prodForm.city}
+                    onChange={(e) => setProdForm((p) => ({ ...p, city: e.target.value }))}
+                  />
+                </div>
+                <div className="apm-field">
+                  <label className="apm-label">Subcity / Area</label>
+                  <input
+                    className="apm-input"
+                    placeholder="Bole"
+                    value={prodForm.subcity}
+                    onChange={(e) => setProdForm((p) => ({ ...p, subcity: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* ── Seller Info ── */}
+              <div className="apm-seller-section">
+                <div className="apm-seller-title">Seller Information</div>
+                <div className="apm-row">
+                  <div className="apm-field">
+                    <label className="apm-label">Seller Name</label>
+                    <input className="apm-input" value={prodForm.sellerName}
+                      onChange={(e) => setProdForm((p) => ({ ...p, sellerName: e.target.value }))} />
+                  </div>
+                  <div className="apm-field">
+                    <label className="apm-label">Seller Phone</label>
+                    <input className="apm-input" value={prodForm.sellerPhone}
+                      onChange={(e) => setProdForm((p) => ({ ...p, sellerPhone: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Toggles ── */}
+              <div className="apm-toggles">
+                <label className="apm-toggle-label">
+                  <div className={`apm-toggle ${prodForm.negotiable ? "on" : ""}`}
+                    onClick={() => setProdForm((p) => ({ ...p, negotiable: !p.negotiable }))}>
+                    <span className="apm-toggle-thumb" />
+                  </div>
+                  <span>Price Negotiable</span>
+                </label>
+                <label className="apm-toggle-label">
+                  <div className={`apm-toggle ${prodForm.featured ? "on" : ""}`}
+                    onClick={() => setProdForm((p) => ({ ...p, featured: !p.featured }))}>
+                    <span className="apm-toggle-thumb" />
+                  </div>
+                  <span>💎 Featured / Boosted</span>
+                </label>
+              </div>
+
+              {/* ── Submit ── */}
+              <button type="submit" className="apm-submit-btn" disabled={modalLoading}>
+                {modalLoading
+                  ? <><span className="apm-submit-spinner" /> Saving…</>
+                  : productModal.mode === "add" ? "Submit" : "Save Changes"}
+              </button>
+
+              <button type="button" className="apm-cancel-link"
+                onClick={() => setProductModal({ open: false, mode: "add", data: null })}>
+                Cancel
+              </button>
+
             </form>
           </div>
         </div>
