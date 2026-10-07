@@ -1,5 +1,5 @@
 /**
- * Seed script — populates MongoDB with realistic Ethiopian Engocha-style marketplace listings.
+ * Seed script — populates MongoDB with realistic Ethiopian Gedualpha-style marketplace listings.
  *
  * Usage:
  *   node server/database/seed.js
@@ -20,21 +20,21 @@ const uri =
 
 const productSchema = new mongoose.Schema(
   {
-    _id:         String,
-    name:        String,
-    category:    String,
-    price:       Number,
-    negotiable:  Boolean,
-    condition:   String,
-    stock:       Number,
-    art:         String,
-    color:       String,
-    tint:        String,
+    _id: String,
+    name: String,
+    category: String,
+    price: Number,
+    negotiable: Boolean,
+    condition: String,
+    stock: Number,
+    art: String,
+    color: String,
+    tint: String,
     description: String,
-    location:    { city: String, subcity: String },
-    seller:      { name: String, phone: String, telegram: String, whatsapp: String, verified: Boolean },
-    views:       Number,
-    featured:    Boolean,
+    location: { city: String, subcity: String },
+    seller: { name: String, phone: String, telegram: String, whatsapp: String, verified: Boolean },
+    views: Number,
+    featured: Boolean,
   },
   { timestamps: true }
 );

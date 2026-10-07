@@ -57,6 +57,7 @@ export default function Sell() {
     city: "Addis Ababa",
     subcity: "Bole",
     description: "",
+    image: "",
     art: "phone",
     color: "#2563EB",
     tint: "#EFF6FF",
@@ -66,13 +67,15 @@ export default function Sell() {
     sellerWhatsapp: "0941645784",
   });
 
+  const [dragActive, setDragActive] = useState(false);
+
   useEffect(() => {
     const ac = new AbortController();
     api.locations(ac.signal)
       .then((data) => {
         if (data.cities) setLocations(data.cities);
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => ac.abort();
   }, []);
 
@@ -94,6 +97,60 @@ export default function Sell() {
       }
       return next;
     });
+  }
+
+  function handleImageFile(file) {
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1200;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        setFormData((prev) => ({ ...prev, image: dataUrl }));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageFile(e.dataTransfer.files[0]);
+    }
+  }
+
+  function handleDrag(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }
+
+  function handleRemoveImage() {
+    setFormData((prev) => ({ ...prev, image: "" }));
   }
 
   function handleColorSelect(preset) {
@@ -130,6 +187,7 @@ export default function Sell() {
         negotiable: formData.negotiable,
         condition: formData.condition,
         description: formData.description,
+        image: formData.image || null,
         art: formData.art,
         color: formData.color,
         tint: formData.tint,
@@ -158,7 +216,7 @@ export default function Sell() {
   return (
     <div className="container sell-page-container">
       <div className="sell-page-header">
-        <span className="sell-hero-badge">Engocha Verified Marketplace</span>
+        <span className="sell-hero-badge">Gedualpha Verified Marketplace</span>
         <h1>Post a Free Listing on Gedualpha Ecom</h1>
         <p>Reach thousands of buyers in Addis Ababa and across Ethiopia in minutes.</p>
       </div>
@@ -187,9 +245,70 @@ export default function Sell() {
               </div>
             </div>
 
-            {/* Step 2: Details */}
+            {/* Step 2: Product Photo / Image Upload */}
             <div className="form-section">
-              <label className="form-section-title">2. Listing Details</label>
+              <div className="section-header-row">
+                <label className="form-section-title">2. Upload Item Photos (ፎቶ ይጫኑ)</label>
+                <span className="section-badge-optional">Recommended</span>
+              </div>
+              <p className="form-section-desc">
+                Add real photos of your item to attract 5x more Ethiopian buyers.
+              </p>
+
+              {formData.image ? (
+                <div className="uploaded-image-preview-box">
+                  <div className="preview-image-container">
+                    <img src={formData.image} alt="Uploaded item preview" className="uploaded-thumb" />
+                    <div className="preview-image-overlay">
+                      <span className="preview-ready-badge">✓ Image Ready</span>
+                      <button
+                        type="button"
+                        className="btn-remove-photo"
+                        onClick={handleRemoveImage}
+                        title="Remove photo"
+                      >
+                        🗑️ Remove / Change Photo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className={`image-upload-dropzone ${dragActive ? "drag-active" : ""}`}
+                  onDragEnter={handleDrag}
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                >
+                  <input
+                    type="file"
+                    id="product-image-upload"
+                    accept="image/png, image/jpeg, image/webp, image/gif"
+                    className="file-input-hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleImageFile(e.target.files[0]);
+                      }
+                    }}
+                  />
+                  <div className="dropzone-content">
+                    <div className="upload-icon-circle">
+                      📸
+                    </div>
+                    <h4>Upload Product Photo</h4>
+                    <p>Drag and drop your image here, or browse from your device</p>
+                    <label htmlFor="product-image-upload" className="btn btn-accent btn-sm btn-browse-files">
+                      📁 Browse Photo Files
+                    </label>
+                    <span className="upload-help-text">Supports JPG, PNG, WEBP (Auto-optimized)</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Step 3: Details */}
+            <div className="form-section">
+              <label className="form-section-title">3. Listing Details</label>
 
               <div className="field">
                 <span>Item Title *</span>
@@ -252,9 +371,9 @@ export default function Sell() {
               </div>
             </div>
 
-            {/* Step 3: Location */}
+            {/* Step 4: Location */}
             <div className="form-section">
-              <label className="form-section-title">3. Item Location</label>
+              <label className="form-section-title">4. Item Location</label>
               <div className="fields-row">
                 <div className="field">
                   <span>City</span>
@@ -290,11 +409,11 @@ export default function Sell() {
               </div>
             </div>
 
-            {/* Step 4: Visual Illustration & Theme */}
+            {/* Step 5: Visual Illustration & Theme */}
             <div className="form-section">
-              <label className="form-section-title">4. Card Illustration & Theme</label>
+              <label className="form-section-title">5. Card Theme & Fallback Icon</label>
               <div className="field">
-                <span>Select Icon Shape</span>
+                <span>Select Fallback Icon Shape</span>
                 <select
                   value={formData.art}
                   onChange={(e) => handleChange("art", e.target.value)}
@@ -324,9 +443,9 @@ export default function Sell() {
               </div>
             </div>
 
-            {/* Step 5: Seller Contact */}
+            {/* Step 6: Seller Contact */}
             <div className="form-section">
-              <label className="form-section-title">5. Contact Information</label>
+              <label className="form-section-title">6. Contact Information</label>
               <div className="field">
                 <span>Your Name / Shop Name</span>
                 <input
@@ -392,7 +511,15 @@ export default function Sell() {
             <article className="card marketplace-card preview-card">
               <div className="card-art">
                 <div className="card-art-inner">
-                  <ProductArt art={formData.art} color={formData.color} tint={formData.tint} />
+                  {formData.image ? (
+                    <img
+                      src={formData.image}
+                      alt={formData.name || "Preview"}
+                      className="card-photo"
+                    />
+                  ) : (
+                    <ProductArt art={formData.art} color={formData.color} tint={formData.tint} />
+                  )}
                 </div>
                 <span className="card-badge-condition">{formData.condition}</span>
               </div>
@@ -427,7 +554,7 @@ export default function Sell() {
             </article>
 
             <div className="trust-tips-box">
-              <h4>🛡️ Engocha Safe Selling Tips</h4>
+              <h4>🛡️ Gedualpha Safe Selling Tips</h4>
               <ul>
                 <li>Provide accurate condition and details</li>
                 <li>Never ask buyers for prepaid advance without escrow</li>

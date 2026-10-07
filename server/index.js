@@ -13,7 +13,7 @@ dotenv.config();
 dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), ".env") });
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
+const __dirname = path.dirname(__filename);
 const CLIENT_DIST = path.join(__dirname, "../client/dist");
 
 const app = express();
@@ -45,7 +45,8 @@ const CATEGORIES = [
 ];
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || "*" }));
-app.use(express.json({ limit: "200kb" }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Serve built React frontend
 app.use(express.static(CLIENT_DIST));
@@ -56,7 +57,7 @@ app.get("/api/health", (_req, res) => {
   res.status(200).json({
     status: "ok",
     db: ready ? "connected" : "connecting",
-    platform: "Gedualpha Ecom Marketplace (Engocha Flow)",
+    platform: "Gedualpha Ecom Marketplace (Gedualpha Flow)",
     currency: "ETB",
   });
 });
@@ -99,10 +100,10 @@ app.get("/api/products", async (req, res) => {
       limit = "12"
     } = req.query;
 
-    const needle  = String(q).trim();
-    const size    = Math.min(48, Math.max(1, parseInt(limit, 10) || 12));
+    const needle = String(q).trim();
+    const size = Math.min(48, Math.max(1, parseInt(limit, 10) || 12));
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const offset  = (pageNum - 1) * size;
+    const offset = (pageNum - 1) * size;
 
     // Build filter
     const filter = {};
@@ -131,12 +132,12 @@ app.get("/api/products", async (req, res) => {
     }
 
     const sortMap = {
-      "price-asc":  { price:  1 },
+      "price-asc": { price: 1 },
       "price-desc": { price: -1 },
-      "name":       { name:   1 },
-      "views":      { views: -1, createdAt: -1 },
-      "newest":     { createdAt: -1 },
-      "featured":   { featured: -1, createdAt: -1 },
+      "name": { name: 1 },
+      "views": { views: -1, createdAt: -1 },
+      "newest": { createdAt: -1 },
+      "featured": { featured: -1, createdAt: -1 },
     };
     const sortBy = sortMap[sort] || { featured: -1, createdAt: -1 };
 
@@ -186,6 +187,7 @@ app.post("/api/products", async (req, res) => {
       condition = "Brand New",
       description,
       stock = 1,
+      image = null,
       art = "notebook",
       color = "#2563EB",
       tint = "#EFF6FF",
@@ -222,6 +224,7 @@ app.post("/api/products", async (req, res) => {
       negotiable: Boolean(negotiable),
       condition: String(condition).trim(),
       stock: Math.max(1, parseInt(stock, 10) || 1),
+      image: image ? String(image).trim() : null,
       art: String(art || "notebook"),
       color: String(color || "#2563EB"),
       tint: String(tint || "#EFF6FF"),
@@ -264,7 +267,7 @@ app.post("/api/orders", async (req, res) => {
   if (Object.keys(errors).length) return res.status(400).json({ errors });
 
   // Process items — atomically deduct stock per product using findOneAndUpdate
-  const lines    = [];  // validated line items for the order
+  const lines = [];  // validated line items for the order
   const deducted = [];  // track what we've already deducted so we can roll back on error
 
   try {
@@ -297,16 +300,16 @@ app.post("/api/orders", async (req, res) => {
 
     const subtotal = lines.reduce((n, l) => n + l.price * l.qty, 0);
     const shipping = subtotal >= FREE_SHIPPING_OVER ? 0 : FLAT_SHIPPING;
-    const orderId  = crypto.randomUUID().slice(0, 8).toUpperCase();
+    const orderId = crypto.randomUUID().slice(0, 8).toUpperCase();
 
     const order = await Order.create({
-      _id:      orderId,
+      _id: orderId,
       customer: {
-        name:    customer.name.trim(),
-        email:   customer.email.trim(),
+        name: customer.name.trim(),
+        email: customer.email.trim(),
         address: customer.address.trim(),
-        city:    customer.city.trim(),
-        postal:  customer.postal.trim(),
+        city: customer.city.trim(),
+        postal: customer.postal.trim(),
       },
       items: lines,   // embedded in the order document
       subtotal,
@@ -315,12 +318,12 @@ app.post("/api/orders", async (req, res) => {
     });
 
     res.status(201).json({
-      id:       order._id,
+      id: order._id,
       customer: order.customer,
-      items:    lines,
+      items: lines,
       subtotal,
       shipping,
-      total:    subtotal + shipping,
+      total: subtotal + shipping,
       createdAt: order.createdAt,
     });
   } catch (err) {

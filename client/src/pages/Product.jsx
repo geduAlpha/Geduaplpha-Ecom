@@ -8,7 +8,7 @@ import { money } from "../money.js";
 function ArrowLeftIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16">
-      <path d="M19 12H5M12 5l-7 7 7 7"/>
+      <path d="M19 12H5M12 5l-7 7 7 7" />
     </svg>
   );
 }
@@ -31,12 +31,12 @@ function SkeletonDetail() {
 }
 
 export default function Product() {
-  const { id }         = useParams();
-  const { add }        = useCart();
+  const { id } = useParams();
+  const { add } = useCart();
   const [product, setProduct] = useState(null);
-  const [status, setStatus]   = useState("loading");
-  const [qty, setQty]         = useState(1);
-  const [added, setAdded]     = useState(false);
+  const [status, setStatus] = useState("loading");
+  const [qty, setQty] = useState(1);
+  const [added, setAdded] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
 
   useEffect(() => {
@@ -69,8 +69,8 @@ export default function Product() {
   }
 
   const soldOut = product.stock < 1;
-  const maxQty  = Math.min(product.stock, 20);
-  const low     = !soldOut && product.stock <= 5;
+  const maxQty = Math.min(product.stock, 20);
+  const low = !soldOut && product.stock <= 5;
   const locationText = product.location
     ? `${product.location.subcity ? product.location.subcity + ", " : ""}${product.location.city || "Addis Ababa"}`
     : "Addis Ababa, Ethiopia";
@@ -97,7 +97,15 @@ export default function Product() {
         {/* Visual Artwork & Badges */}
         <div className="detail-art-col">
           <div className="detail-art">
-            <ProductArt art={product.art} color={product.color} tint={product.tint} label={product.name} />
+            {product.image ? (
+              <img
+                src={product.image}
+                alt={product.name}
+                className="detail-photo"
+              />
+            ) : (
+              <ProductArt art={product.art} color={product.color} tint={product.tint} label={product.name} />
+            )}
             {product.featured && (
               <span className="card-badge-featured" style={{ position: "absolute", top: "1rem", left: "1rem" }}>
                 💎 Diamond Boosted
@@ -112,7 +120,7 @@ export default function Product() {
 
           {/* Safe Shopping Box */}
           <div className="safe-trading-card">
-            <h4>🛡️ Engocha Safety Guidelines</h4>
+            <h4>🛡️ Gedualpha Safety Guidelines</h4>
             <ul>
               <li>Meet seller in a safe, public spot (e.g. Bole Medhanialem, Kazanchis)</li>
               <li>Always check and test the item in person before paying</li>

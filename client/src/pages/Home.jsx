@@ -4,31 +4,31 @@ import { api } from "../api.js";
 import ProductCard from "../components/ProductCard.jsx";
 
 const CATEGORIES = [
-  { value: "all",         label: "All Items",    icon: "🏪", colorClass: "c-gray"   },
-  { value: "electronics", label: "Electronics",  icon: "📱", colorClass: "c-sky"    },
-  { value: "vehicles",    label: "Vehicles",     icon: "🚗", colorClass: "c-amber"  },
-  { value: "property",    label: "Real Estate",  icon: "🏠", colorClass: "c-rose"   },
-  { value: "fashion",     label: "Fashion",      icon: "👗", colorClass: "c-purple" },
-  { value: "furniture",   label: "Furniture",    icon: "🛋️", colorClass: "c-emerald"},
-  { value: "stationery",  label: "Stationery",   icon: "📚", colorClass: "c-blue"   },
-  { value: "services",    label: "Services",     icon: "💼", colorClass: "c-indigo" },
+  { value: "all", label: "All Items", icon: "🏪", colorClass: "c-gray" },
+  { value: "electronics", label: "Electronics", icon: "📱", colorClass: "c-sky" },
+  { value: "vehicles", label: "Vehicles", icon: "🚗", colorClass: "c-amber" },
+  { value: "property", label: "Real Estate", icon: "🏠", colorClass: "c-rose" },
+  { value: "fashion", label: "Fashion", icon: "👗", colorClass: "c-purple" },
+  { value: "furniture", label: "Furniture", icon: "🛋️", colorClass: "c-emerald" },
+  { value: "stationery", label: "Stationery", icon: "📚", colorClass: "c-blue" },
+  { value: "services", label: "Services", icon: "💼", colorClass: "c-indigo" },
 ];
 
 const SORT_OPTIONS = [
-  { value: "featured",   label: "💎 Featured / Boosted" },
-  { value: "newest",     label: "🕒 Newest Listings"      },
-  { value: "views",      label: "🔥 Most Viewed"         },
-  { value: "price-asc",  label: "💰 Price: Low → High"   },
-  { value: "price-desc", label: "💰 Price: High → Low"   },
-  { value: "name",       label: "🔤 Title A–Z"           },
+  { value: "featured", label: "💎 Featured / Boosted" },
+  { value: "newest", label: "🕒 Newest Listings" },
+  { value: "views", label: "🔥 Most Viewed" },
+  { value: "price-asc", label: "💰 Price: Low → High" },
+  { value: "price-desc", label: "💰 Price: High → Low" },
+  { value: "name", label: "🔤 Title A–Z" },
 ];
 
 const CONDITIONS = [
-  { value: "all",         label: "All Conditions" },
-  { value: "Brand New",   label: "Brand New"      },
-  { value: "Like New",    label: "Like New"       },
-  { value: "Used",        label: "Used"           },
-  { value: "Refurbished", label: "Refurbished"    },
+  { value: "all", label: "All Conditions" },
+  { value: "Brand New", label: "Brand New" },
+  { value: "Like New", label: "Like New" },
+  { value: "Used", label: "Used" },
+  { value: "Refurbished", label: "Refurbished" },
 ];
 
 const POPULAR_TAGS = [
@@ -58,9 +58,9 @@ function SkeletonCard() {
 function FilterIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14">
-      <line x1="4" y1="6" x2="20" y2="6"/>
-      <line x1="8" y1="12" x2="16" y2="12"/>
-      <line x1="11" y1="18" x2="13" y2="18"/>
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <line x1="8" y1="12" x2="16" y2="12" />
+      <line x1="11" y1="18" x2="13" y2="18" />
     </svg>
   );
 }
@@ -68,22 +68,22 @@ function FilterIcon() {
 function XIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="18" height="18">
-      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
     </svg>
   );
 }
 
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [category, setCategory]   = useState(searchParams.get("category") || "all");
-  const [city, setCity]           = useState(searchParams.get("city") || "all");
+  const [category, setCategory] = useState(searchParams.get("category") || "all");
+  const [city, setCity] = useState(searchParams.get("city") || "all");
   const [condition, setCondition] = useState(searchParams.get("condition") || "all");
-  const [minPrice, setMinPrice]   = useState(searchParams.get("minPrice") || "");
-  const [maxPrice, setMaxPrice]   = useState(searchParams.get("maxPrice") || "");
-  const [sort, setSort]           = useState(searchParams.get("sort") || "featured");
-  const [page, setPage]           = useState(1);
-  const [data, setData]           = useState(null);
-  const [status, setStatus]       = useState("loading");
+  const [minPrice, setMinPrice] = useState(searchParams.get("minPrice") || "");
+  const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
+  const [sort, setSort] = useState(searchParams.get("sort") || "featured");
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState(null);
+  const [status, setStatus] = useState("loading");
   const [filterOpen, setFilterOpen] = useState(false);
   const [locations, setLocations] = useState([]);
 
@@ -93,7 +93,7 @@ export default function Home() {
     const ac = new AbortController();
     api.locations(ac.signal)
       .then((res) => { if (res.cities) setLocations(res.cities); })
-      .catch(() => {});
+      .catch(() => { });
     return () => ac.abort();
   }, []);
 
@@ -120,9 +120,9 @@ export default function Home() {
   useEffect(load, [load]);
 
   const setCategory_ = (v) => { setCategory(v); setPage(1); };
-  const setCity_     = (v) => { setCity(v);     setPage(1); };
-  const setSort_     = (v) => { setSort(v);     setPage(1); };
-  const setCondition_= (v) => { setCondition(v); setPage(1); };
+  const setCity_ = (v) => { setCity(v); setPage(1); };
+  const setSort_ = (v) => { setSort(v); setPage(1); };
+  const setCondition_ = (v) => { setCondition(v); setPage(1); };
 
   function handleTagClick(tag) {
     setSearchParams({ q: tag });
@@ -132,8 +132,8 @@ export default function Home() {
   function handleHeroSearch(e) {
     e.preventDefault();
     const queryVal = e.target.searchVal.value.trim();
-    const cityVal  = e.target.citySelect.value;
-    const catVal   = e.target.catSelect.value;
+    const cityVal = e.target.citySelect.value;
+    const catVal = e.target.catSelect.value;
 
     const newParams = {};
     if (queryVal) newParams.q = queryVal;
@@ -263,8 +263,8 @@ export default function Home() {
 
   return (
     <div>
-      {/* ─── Engocha-Style Hero Banner ─── */}
-      <section className="engocha-hero-section">
+      {/* ─── Gedualpha-Style Hero Banner ─── */}
+      <section className="Gedualpha-hero-section">
         <div className="container">
           <div className="hero-content">
             <span className="hero-eyebrow">🇪🇹 Ethiopia’s Premier Online Marketplace</span>

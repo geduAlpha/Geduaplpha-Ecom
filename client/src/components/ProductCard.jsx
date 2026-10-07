@@ -14,7 +14,16 @@ export default function ProductCard({ product: p }) {
     <article className="card marketplace-card" id={`card-${p.id}`}>
       <Link to={`/product/${p.id}`} className="card-art" aria-label={p.name} id={`card-art-${p.id}`}>
         <div className="card-art-inner">
-          <ProductArt art={p.art} color={p.color} tint={p.tint} />
+          {p.image ? (
+            <img
+              src={p.image}
+              alt={p.name}
+              className="card-photo"
+              loading="lazy"
+            />
+          ) : (
+            <ProductArt art={p.art} color={p.color} tint={p.tint} />
+          )}
         </div>
         {p.featured && (
           <span className="card-badge-featured" title="Diamond Boost / Top Ad">
