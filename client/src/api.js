@@ -25,4 +25,25 @@ export const api = {
   paymentConfig: (signal) => request("/payments/config", { signal }),
   initializeChapa: (body) => request("/payments/chapa/initialize", { method: "POST", body: JSON.stringify(body) }),
   verifyChapa: (tx_ref) => request(`/payments/chapa/verify/${tx_ref}`),
+
+  // Admin APIs
+  adminLogin: (password) => request("/admin/login", { method: "POST", body: JSON.stringify({ password }) }),
+  adminStats: (signal) => request("/admin/stats", { signal }),
+  adminProducts: (params, signal) => {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params || {}).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+    );
+    return request(`/admin/products?${new URLSearchParams(cleanParams)}`, { signal });
+  },
+  adminCreateProduct: (body) => request("/admin/products", { method: "POST", body: JSON.stringify(body) }),
+  adminUpdateProduct: (id, body) => request(`/admin/products/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  adminDeleteProduct: (id) => request(`/admin/products/${id}`, { method: "DELETE" }),
+  adminOrders: (params, signal) => {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params || {}).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+    );
+    return request(`/admin/orders?${new URLSearchParams(cleanParams)}`, { signal });
+  },
+  adminUpdateOrder: (id, body) => request(`/admin/orders/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  adminDeleteOrder: (id) => request(`/admin/orders/${id}`, { method: "DELETE" }),
 };

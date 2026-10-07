@@ -7,6 +7,7 @@ import Home from "./pages/Home.jsx";
 import Product from "./pages/Product.jsx";
 import Checkout from "./pages/Checkout.jsx";
 import Sell from "./pages/Sell.jsx";
+import Admin from "./pages/Admin.jsx";
 
 function NotFound() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/product/:id" element={<Product />} />
           <Route path="/sell" element={<Sell />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

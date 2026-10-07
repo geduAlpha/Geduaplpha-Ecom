@@ -33,7 +33,7 @@ const FOOTER_LINKS = {
     { label: "Safe Buying Guidelines", to: "#" },
     { label: "Telebirr & CBE Payment", to: "#" },
     { label: "Diamond Boost Ads", to: "#" },
-    { label: "Customer Support (24/7)", to: "#" },
+    { label: "🛡️ Admin Portal", to: "/admin" },
   ],
 };
 

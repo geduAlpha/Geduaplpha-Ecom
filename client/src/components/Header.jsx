@@ -151,6 +151,11 @@ export default function Header() {
                 <span>+ Post Ad</span>
               </Link>
 
+              {/* Admin Dashboard */}
+              <Link to="/admin" className="admin-nav-link" id="admin-nav-btn" title="Admin Control Dashboard">
+                <span>🛡️ Admin</span>
+              </Link>
+
               {/* Cart */}
               <button
                 id="cart-btn"

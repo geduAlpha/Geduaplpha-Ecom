@@ -267,7 +267,7 @@ export default function Home() {
       <section className="Gedualpha-hero-section">
         <div className="container">
           <div className="hero-content">
-            <span className="hero-eyebrow">🇪🇹 Ethiopia’s Premier Online Marketplace</span>
+            <span className="hero-eyebrow">🇪🇹 @gedualpha Ethiopian’s Online Commerce</span>
             <h1 className="hero-heading">
               Buy, Sell &amp; Discover Everything in <span className="text-highlight">Addis Ababa</span> &amp; Beyond
             </h1>

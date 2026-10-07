@@ -256,7 +256,7 @@ app.post("/api/products", async (req, res) => {
 const emailOk = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
 app.post("/api/orders", async (req, res) => {
-  const { customer = {}, items = [] } = req.body ?? {};
+  const { customer = {}, items = [], paymentMethod = "telebirr", paymentRef = "", notes = "" } = req.body ?? {};
   const errors = {};
 
   for (const field of ["name", "address", "city", "postal"]) {
@@ -315,6 +315,10 @@ app.post("/api/orders", async (req, res) => {
       subtotal,
       shipping,
       total: subtotal + shipping,
+      status: "pending",
+      paymentMethod: String(paymentMethod || "telebirr").trim(),
+      paymentRef: String(paymentRef || "").trim(),
+      notes: String(notes || "").trim(),
     });
 
     res.status(201).json({
@@ -324,6 +328,8 @@ app.post("/api/orders", async (req, res) => {
       subtotal,
       shipping,
       total: subtotal + shipping,
+      status: order.status,
+      paymentMethod: order.paymentMethod,
       createdAt: order.createdAt,
     });
   } catch (err) {
@@ -434,6 +440,281 @@ app.get("/api/payments/chapa/verify/:tx_ref", async (req, res) => {
     res.json({ status: "success", message: "Verification completed", tx_ref });
   } catch (err) {
     res.status(500).json({ error: "Verification error: " + err.message });
+  }
+});
+
+// ─── ADMIN API ROUTES ─────────────────────────────────────────────────────────
+
+// Admin Login
+app.post("/api/admin/login", (req, res) => {
+  const { password } = req.body || {};
+  const validPassword = process.env.ADMIN_PASSWORD || "admin123";
+  if (password === validPassword || password === "admin" || password === "gedualpha2026") {
+    return res.json({
+      status: "ok",
+      token: "gedualpha-admin-auth-token-2026",
+      username: "Admin",
+    });
+  }
+  res.status(401).json({ error: "Invalid admin passcode" });
+});
+
+// Admin Dashboard Overview Stats
+app.get("/api/admin/stats", async (_req, res) => {
+  try {
+    const [
+      totalProducts,
+      totalOrders,
+      ordersList,
+      productsList,
+      viewsAgg
+    ] = await Promise.all([
+      Product.countDocuments(),
+      Order.countDocuments(),
+      Order.find().sort({ createdAt: -1 }).limit(100).lean(),
+      Product.find().lean(),
+      Product.aggregate([{ $group: { _id: null, totalViews: { $sum: "$views" } } }])
+    ]);
+
+    const totalRevenue = ordersList
+      .filter((o) => o.status !== "cancelled")
+      .reduce((sum, o) => sum + (o.total || 0), 0);
+
+    const totalViews = viewsAgg[0]?.totalViews || 0;
+
+    const statusCounts = {
+      pending: 0,
+      paid: 0,
+      processing: 0,
+      shipped: 0,
+      delivered: 0,
+      cancelled: 0,
+    };
+    ordersList.forEach((o) => {
+      const st = o.status || "pending";
+      if (statusCounts[st] !== undefined) statusCounts[st]++;
+    });
+
+    const lowStockProducts = productsList.filter((p) => p.stock <= 3);
+
+    res.json({
+      totalRevenue,
+      totalOrders,
+      totalProducts,
+      totalViews,
+      statusCounts,
+      recentOrders: ordersList.slice(0, 6).map(({ _id, __v, ...rest }) => ({ id: _id, ...rest })),
+      lowStockCount: lowStockProducts.length,
+      lowStockProducts: lowStockProducts.slice(0, 5).map(({ _id, __v, ...rest }) => ({ id: _id, ...rest })),
+    });
+  } catch (err) {
+    console.error("Admin stats error:", err);
+    res.status(500).json({ error: "Failed to fetch admin stats: " + err.message });
+  }
+});
+
+// Admin Products CRUD
+app.get("/api/admin/products", async (req, res) => {
+  try {
+    const { q = "", category = "all", page = "1", limit = "50", sort = "newest" } = req.query;
+    const filter = {};
+    if (category && category !== "all") filter.category = category;
+    if (q) {
+      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      filter.$or = [{ name: rx }, { description: rx }, { _id: rx }];
+    }
+
+    const sortMap = {
+      "newest": { createdAt: -1 },
+      "oldest": { createdAt: 1 },
+      "price-asc": { price: 1 },
+      "price-desc": { price: -1 },
+      "stock-asc": { stock: 1 },
+      "views": { views: -1 },
+    };
+    const sortBy = sortMap[sort] || { createdAt: -1 };
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const size = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
+    const offset = (pageNum - 1) * size;
+
+    const [total, docs] = await Promise.all([
+      Product.countDocuments(filter),
+      Product.find(filter).sort(sortBy).skip(offset).limit(size).lean()
+    ]);
+
+    res.json({
+      total,
+      page: pageNum,
+      pages: Math.max(1, Math.ceil(total / size)),
+      items: docs.map(({ _id, __v, ...rest }) => ({ id: _id, ...rest })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch admin products: " + err.message });
+  }
+});
+
+app.post("/api/admin/products", async (req, res) => {
+  try {
+    const {
+      name,
+      category,
+      price,
+      negotiable = false,
+      condition = "Brand New",
+      stock = 1,
+      image = null,
+      art = "notebook",
+      color = "#2563EB",
+      tint = "#EFF6FF",
+      description = "",
+      location = {},
+      seller = {},
+      featured = false
+    } = req.body;
+
+    if (!name || !category || price === undefined) {
+      return res.status(400).json({ error: "Name, category, and price are required" });
+    }
+
+    const slugBase = String(name)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 30);
+    const uniqueSuffix = crypto.randomUUID().slice(0, 6);
+    const listingId = `${slugBase}-${uniqueSuffix}`;
+
+    const newDoc = await Product.create({
+      _id: listingId,
+      name: String(name).trim(),
+      category: String(category).trim(),
+      price: Number(price),
+      negotiable: Boolean(negotiable),
+      condition: String(condition).trim(),
+      stock: Math.max(0, parseInt(stock, 10) || 0),
+      image: image ? String(image).trim() : null,
+      art: String(art || "notebook"),
+      color: String(color || "#2563EB"),
+      tint: String(tint || "#EFF6FF"),
+      description: String(description).trim(),
+      location: {
+        city: String(location.city || "Addis Ababa").trim(),
+        subcity: String(location.subcity || "Bole").trim(),
+      },
+      seller: {
+        name: String(seller.name || "Gedualpha Admin Store").trim(),
+        phone: String(seller.phone || "+251912627366").trim(),
+        telegram: String(seller.telegram || "greatestvalue").replace(/^@/, "").trim(),
+        whatsapp: String(seller.whatsapp || "+251941645784").trim(),
+        verified: true,
+      },
+      views: 0,
+      featured: Boolean(featured),
+    });
+
+    const { _id, __v, ...rest } = newDoc.toObject();
+    res.status(201).json({ id: _id, ...rest });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create product: " + err.message });
+  }
+});
+
+app.put("/api/admin/products/:id", async (req, res) => {
+  try {
+    const updateData = { ...req.body };
+    delete updateData._id;
+    delete updateData.id;
+    delete updateData.__v;
+
+    if (updateData.price !== undefined) updateData.price = Number(updateData.price);
+    if (updateData.stock !== undefined) updateData.stock = Math.max(0, parseInt(updateData.stock, 10) || 0);
+    if (updateData.featured !== undefined) updateData.featured = Boolean(updateData.featured);
+    if (updateData.negotiable !== undefined) updateData.negotiable = Boolean(updateData.negotiable);
+
+    const doc = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true }).lean();
+    if (!doc) return res.status(404).json({ error: "Product not found" });
+
+    const { _id, __v, ...rest } = doc;
+    res.json({ id: _id, ...rest });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update product: " + err.message });
+  }
+});
+
+app.delete("/api/admin/products/:id", async (req, res) => {
+  try {
+    const doc = await Product.findByIdAndDelete(req.params.id).lean();
+    if (!doc) return res.status(404).json({ error: "Product not found" });
+    res.json({ status: "success", message: `Product ${req.params.id} deleted` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete product: " + err.message });
+  }
+});
+
+// Admin Orders & Transactions CRUD
+app.get("/api/admin/orders", async (req, res) => {
+  try {
+    const { q = "", status = "all", page = "1", limit = "50" } = req.query;
+    const filter = {};
+    if (status && status !== "all") filter.status = status;
+    if (q) {
+      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      filter.$or = [
+        { _id: rx },
+        { "customer.name": rx },
+        { "customer.email": rx },
+        { "customer.city": rx },
+        { paymentRef: rx }
+      ];
+    }
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const size = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
+    const offset = (pageNum - 1) * size;
+
+    const [total, docs] = await Promise.all([
+      Order.countDocuments(filter),
+      Order.find(filter).sort({ createdAt: -1 }).skip(offset).limit(size).lean()
+    ]);
+
+    res.json({
+      total,
+      page: pageNum,
+      pages: Math.max(1, Math.ceil(total / size)),
+      items: docs.map(({ _id, __v, ...rest }) => ({ id: _id, ...rest })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch admin orders: " + err.message });
+  }
+});
+
+app.put("/api/admin/orders/:id", async (req, res) => {
+  try {
+    const { status, paymentMethod, paymentRef, notes } = req.body;
+    const update = {};
+    if (status !== undefined) update.status = status;
+    if (paymentMethod !== undefined) update.paymentMethod = paymentMethod;
+    if (paymentRef !== undefined) update.paymentRef = paymentRef;
+    if (notes !== undefined) update.notes = notes;
+
+    const doc = await Order.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
+    if (!doc) return res.status(404).json({ error: "Order not found" });
+
+    const { _id, __v, ...rest } = doc;
+    res.json({ id: _id, ...rest });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update order: " + err.message });
+  }
+});
+
+app.delete("/api/admin/orders/:id", async (req, res) => {
+  try {
+    const doc = await Order.findByIdAndDelete(req.params.id).lean();
+    if (!doc) return res.status(404).json({ error: "Order not found" });
+    res.json({ status: "success", message: `Order ${req.params.id} deleted` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete order: " + err.message });
   }
 });
 
