@@ -60,9 +60,10 @@ export default function Sell() {
     art: "phone",
     color: "#2563EB",
     tint: "#EFF6FF",
-    sellerName: "",
-    sellerPhone: "+251 ",
-    sellerTelegram: "",
+    sellerName: "Gedualpha Verified Seller",
+    sellerPhone: "+251912627366",
+    sellerTelegram: "greatestvalue",
+    sellerWhatsapp: "0941645784",
   });
 
   useEffect(() => {
@@ -137,9 +138,10 @@ export default function Sell() {
           subcity: formData.subcity,
         },
         seller: {
-          name: formData.sellerName || "Verified Seller",
+          name: formData.sellerName || "Gedualpha Verified Seller",
           phone: formData.sellerPhone,
           telegram: formData.sellerTelegram,
+          whatsapp: formData.sellerWhatsapp,
           verified: true,
         },
       };
@@ -337,10 +339,10 @@ export default function Sell() {
 
               <div className="fields-row">
                 <div className="field">
-                  <span>Phone Number *</span>
+                  <span>Phone Number (Call) *</span>
                   <input
                     type="tel"
-                    placeholder="+251 91 123 4567"
+                    placeholder="+251912627366"
                     value={formData.sellerPhone}
                     onChange={(e) => handleChange("sellerPhone", e.target.value)}
                     aria-invalid={!!errors.sellerPhone}
@@ -349,14 +351,24 @@ export default function Sell() {
                 </div>
 
                 <div className="field">
-                  <span>Telegram Username (Optional)</span>
+                  <span>Telegram Username</span>
                   <input
                     type="text"
-                    placeholder="e.g. abebe_seller"
+                    placeholder="e.g. greatestvalue"
                     value={formData.sellerTelegram}
                     onChange={(e) => handleChange("sellerTelegram", e.target.value)}
                   />
                 </div>
+              </div>
+
+              <div className="field">
+                <span>WhatsApp Number</span>
+                <input
+                  type="tel"
+                  placeholder="0941645784 or +251941645784"
+                  value={formData.sellerWhatsapp}
+                  onChange={(e) => handleChange("sellerWhatsapp", e.target.value)}
+                />
               </div>
             </div>
 

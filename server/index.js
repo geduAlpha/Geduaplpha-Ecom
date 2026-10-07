@@ -232,9 +232,9 @@ app.post("/api/products", async (req, res) => {
       },
       seller: {
         name: String(seller.name || "Gedualpha Seller").trim(),
-        phone: String(seller.phone || "").trim(),
-        telegram: String(seller.telegram || "").replace(/^@/, "").trim(),
-        whatsapp: String(seller.whatsapp || "").trim(),
+        phone: String(seller.phone || "+251912627366").trim(),
+        telegram: String(seller.telegram || "greatestvalue").replace(/^@/, "").trim(),
+        whatsapp: String(seller.whatsapp || "+251941645784").trim(),
         verified: true,
       },
       views: 1,

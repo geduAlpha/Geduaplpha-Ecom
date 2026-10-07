@@ -75,9 +75,11 @@ export default function Product() {
     ? `${product.location.subcity ? product.location.subcity + ", " : ""}${product.location.city || "Addis Ababa"}`
     : "Addis Ababa, Ethiopia";
 
-  const sellerPhone = product.seller?.phone || "+251 91 123 4567";
+  const sellerPhone = product.seller?.phone || "+251912627366";
   const rawPhone = sellerPhone.replace(/\s+/g, "");
-  const tgHandle = product.seller?.telegram?.replace(/^@/, "");
+  const tgHandle = product.seller?.telegram ? product.seller.telegram.replace(/^@/, "") : "greatestvalue";
+  const sellerWhatsapp = product.seller?.whatsapp || "0941645784";
+  const rawWhatsapp = sellerWhatsapp.replace(/[^0-9]/g, "").replace(/^0/, "251");
 
   function handleAdd() {
     add(product, qty);
@@ -144,10 +146,10 @@ export default function Product() {
           <div className="seller-profile-card">
             <div className="seller-header">
               <div className="seller-avatar">
-                {product.seller?.name ? product.seller.name.charAt(0).toUpperCase() : "S"}
+                {product.seller?.name ? product.seller.name.charAt(0).toUpperCase() : "G"}
               </div>
               <div className="seller-details">
-                <h3>{product.seller?.name || "Verified Gedualpha Seller"}</h3>
+                <h3>{product.seller?.name || "Gedualpha Verified Seller"}</h3>
                 <span className="verified-tag">✓ Verified Marketplace Seller</span>
               </div>
             </div>
@@ -181,6 +183,18 @@ export default function Product() {
                   id="telegram-chat-btn"
                 >
                   ✈️ Chat on Telegram (@{tgHandle})
+                </a>
+              )}
+
+              {rawWhatsapp && (
+                <a
+                  href={`https://wa.me/${rawWhatsapp}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-seller-whatsapp"
+                  id="whatsapp-chat-btn"
+                >
+                  💬 Chat on WhatsApp ({sellerWhatsapp})
                 </a>
               )}
             </div>

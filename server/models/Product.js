@@ -20,9 +20,9 @@ const locationSchema = new mongoose.Schema(
 const sellerSchema = new mongoose.Schema(
   {
     name:     { type: String, default: "Gedualpha Seller" },
-    phone:    { type: String, default: "+251 91 123 4567" },
-    telegram: { type: String, default: "gedualpha_ecom" },
-    whatsapp: { type: String, default: "+251911234567" },
+    phone:    { type: String, default: "+251912627366" },
+    telegram: { type: String, default: "greatestvalue" },
+    whatsapp: { type: String, default: "+251941645784" },
     verified: { type: Boolean, default: true },
   },
   { _id: false }
@@ -42,7 +42,7 @@ const productSchema = new mongoose.Schema(
     tint:        { type: String, required: true, default: "#EFF6FF" },
     description: { type: String, required: true },
     location:    { type: locationSchema, default: () => ({ city: "Addis Ababa", subcity: "Bole" }) },
-    seller:      { type: sellerSchema, default: () => ({ name: "Gedualpha Seller", phone: "+251 91 123 4567", telegram: "gedualpha_ecom", verified: true }) },
+    seller:      { type: sellerSchema, default: () => ({ name: "Gedualpha Seller", phone: "+251912627366", telegram: "greatestvalue", whatsapp: "+251941645784", verified: true }) },
     views:       { type: Number, default: 0 },
     featured:    { type: Boolean, default: false },
   },

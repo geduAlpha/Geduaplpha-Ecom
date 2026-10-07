@@ -41,6 +41,14 @@ const productSchema = new mongoose.Schema(
 
 const Product = mongoose.models.Product || mongoose.model("Product", productSchema);
 
+const DEFAULT_SELLER = {
+  name: "Gedualpha Verified Seller",
+  phone: "+251912627366",
+  telegram: "greatestvalue",
+  whatsapp: "+251941645784",
+  verified: true,
+};
+
 const PRODUCTS = [
   // ─── Electronics & Phones ───
   {
@@ -56,7 +64,7 @@ const PRODUCTS = [
     tint: "#EFF6FF",
     description: "Original US model, battery health 98%, includes original box, braided USB-C cable and silicone case. Clean IMEI, no scratches.",
     location: { city: "Addis Ababa", subcity: "Bole" },
-    seller: { name: "Bole Apple Store", phone: "+251 91 144 5566", telegram: "bole_apple", verified: true },
+    seller: DEFAULT_SELLER,
     views: 342,
     featured: true,
   },
@@ -73,7 +81,7 @@ const PRODUCTS = [
     tint: "#F8FAFC",
     description: "Brand new in sealed box with 1-year Apple international warranty. Space Black, 11-core CPU, 14-core GPU, Liquid Retina XDR display.",
     location: { city: "Addis Ababa", subcity: "Kazanchis" },
-    seller: { name: "Addis Tech Hub", phone: "+251 92 233 4455", telegram: "addis_tech", verified: true },
+    seller: DEFAULT_SELLER,
     views: 289,
     featured: true,
   },
@@ -90,7 +98,7 @@ const PRODUCTS = [
     tint: "#F1F5F9",
     description: "Brand new Galaxy AI flagship. Built-in S-Pen, 200MP camera, Snapdragon 8 Gen 3 for Galaxy, titanium frame with anti-reflective glass.",
     location: { city: "Addis Ababa", subcity: "CMC" },
-    seller: { name: "Alpha Mobile Center", phone: "+251 93 355 6677", telegram: "alpha_mobile", verified: true },
+    seller: DEFAULT_SELLER,
     views: 195,
     featured: false,
   },
@@ -107,7 +115,7 @@ const PRODUCTS = [
     tint: "#FAFAFA",
     description: "Industry-leading active noise canceling with 8 microphones and 2 processors. 30-hour battery life with quick charging, Hi-Res audio LDAC.",
     location: { city: "Addis Ababa", subcity: "Megenagna" },
-    seller: { name: "Sound Masters Ethiopia", phone: "+251 91 188 9900", telegram: "sound_eth", verified: true },
+    seller: DEFAULT_SELLER,
     views: 140,
     featured: false,
   },
@@ -126,7 +134,7 @@ const PRODUCTS = [
     tint: "#FEF2F2",
     description: "Very clean private vehicle, first owner in Ethiopia. Mileage: 42,000 km, automatic transmission, push-to-start, rearview camera, perfect AC.",
     location: { city: "Addis Ababa", subcity: "Sarbet" },
-    seller: { name: "Dawit Motors", phone: "+251 91 100 2233", telegram: "dawit_cars", verified: true },
+    seller: DEFAULT_SELLER,
     views: 820,
     featured: true,
   },
@@ -143,7 +151,7 @@ const PRODUCTS = [
     tint: "#EFF6FF",
     description: "Full option panoramic sunroof, leather seats, digital cluster, lane assist, adaptive cruise control. 19,000 km only, showroom condition.",
     location: { city: "Addis Ababa", subcity: "Bole" },
-    seller: { name: "Prime Auto Addis", phone: "+251 94 455 6677", telegram: "prime_auto", verified: true },
+    seller: DEFAULT_SELLER,
     views: 654,
     featured: true,
   },
@@ -162,7 +170,7 @@ const PRODUCTS = [
     tint: "#ECFDF5",
     description: "High-end 2-bedroom, 2-bathroom condo behind Bole Medhanialem. 24/7 generator, backup water tank, security, basement parking, gym and elevator.",
     location: { city: "Addis Ababa", subcity: "Bole" },
-    seller: { name: "Habesha Real Estate", phone: "+251 91 177 8899", telegram: "habesha_realty", verified: true },
+    seller: DEFAULT_SELLER,
     views: 530,
     featured: true,
   },
@@ -179,7 +187,7 @@ const PRODUCTS = [
     tint: "#FFFBEB",
     description: "Spacious contemporary villa with private garden, modern open kitchen, master suite with jacuzzi, solar backup and security system. 250 sqm plot.",
     location: { city: "Addis Ababa", subcity: "CMC" },
-    seller: { name: "Addis Premier Properties", phone: "+251 92 211 4433", telegram: "addis_properties", verified: true },
+    seller: DEFAULT_SELLER,
     views: 412,
     featured: false,
   },
@@ -198,7 +206,7 @@ const PRODUCTS = [
     tint: "#F5F3FF",
     description: "Authentic 100% pure Shewa cotton, custom embroidered with modern gold & blue silk threads. Includes matching Netela shawl. Perfect for weddings & holidays.",
     location: { city: "Addis Ababa", subcity: "Piassa" },
-    seller: { name: "Tibeb Traditional Boutique", phone: "+251 91 133 7788", telegram: "tibeb_boutique", verified: true },
+    seller: DEFAULT_SELLER,
     views: 310,
     featured: false,
   },
@@ -215,7 +223,7 @@ const PRODUCTS = [
     tint: "#FEF3C7",
     description: "Full-grain genuine leather upper, leather lined, Goodyear welted sole. Handcrafted for supreme comfort and formal elegance.",
     location: { city: "Addis Ababa", subcity: "Mexico" },
-    seller: { name: "Gentleman Shoes Addis", phone: "+251 91 166 2244", telegram: "gentleman_shoes", verified: true },
+    seller: DEFAULT_SELLER,
     views: 184,
     featured: false,
   },
@@ -234,7 +242,7 @@ const PRODUCTS = [
     tint: "#F0F9FF",
     description: "High-density orthopedic foam cushions, solid treated eucalyptus hardwood frame, water-repellent grey fabric. Free delivery inside Addis Ababa.",
     location: { city: "Addis Ababa", subcity: "Lebu" },
-    seller: { name: "Addis Home Furniture", phone: "+251 93 344 5566", telegram: "addis_furniture", verified: true },
+    seller: DEFAULT_SELLER,
     views: 248,
     featured: false,
   },
@@ -251,7 +259,7 @@ const PRODUCTS = [
     tint: "#F8FAFC",
     description: "Heavy duty 1.6m laminate wood executive desk with 3 lockable drawers, cable management grommets, and lumbar-support breathable mesh chair.",
     location: { city: "Addis Ababa", subcity: "Gurd Shola" },
-    seller: { name: "Office Solutions Ethiopia", phone: "+251 91 122 8844", telegram: "office_eth", verified: true },
+    seller: DEFAULT_SELLER,
     views: 165,
     featured: false,
   },
@@ -270,7 +278,7 @@ const PRODUCTS = [
     tint: "#EFF6FF",
     description: "A5 Italian faux leather refillable daybook with 200 pages 100gsm acid-free paper, ribbon marker, pen loop, and solid machined brass rollerball pen.",
     location: { city: "Addis Ababa", subcity: "Kazanchis" },
-    seller: { name: "Gedualpha Supply", phone: "+251 91 123 4567", telegram: "gedualpha_ecom", verified: true },
+    seller: DEFAULT_SELLER,
     views: 410,
     featured: true,
   },
@@ -287,7 +295,7 @@ const PRODUCTS = [
     tint: "#FFFBEB",
     description: "Handmade ceramic mug inspired by traditional Ethiopian pottery with modern minimalist glaze. Keeps your Sidama coffee warm longer.",
     location: { city: "Addis Ababa", subcity: "Piassa" },
-    seller: { name: "Gedualpha Supply", phone: "+251 91 123 4567", telegram: "gedualpha_ecom", verified: true },
+    seller: DEFAULT_SELLER,
     views: 198,
     featured: false,
   },
@@ -297,12 +305,11 @@ async function seed() {
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
   console.log("Connected to MongoDB:", mongoose.connection.host);
 
-  // Clear existing items and re-seed with full marketplace listings
   await Product.deleteMany({});
   console.log("Cleared old products collection.");
 
   await Product.insertMany(PRODUCTS);
-  console.log(`✅ Seeded ${PRODUCTS.length} Ethiopian Engocha marketplace listings successfully.`);
+  console.log(`✅ Seeded ${PRODUCTS.length} listings with seller info (+251912627366 / @greatestvalue / 0941645784) successfully.`);
 
   await mongoose.disconnect();
   console.log("Done.");

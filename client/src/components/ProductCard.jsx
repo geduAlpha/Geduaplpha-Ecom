@@ -71,6 +71,18 @@ export default function ProductCard({ product: p }) {
               ✈️
             </a>
           )}
+          {p.seller?.whatsapp && (
+            <a
+              href={`https://wa.me/${p.seller.whatsapp.replace(/[^0-9]/g, "").replace(/^0/, "251")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-card-wa"
+              aria-label={`WhatsApp chat for ${p.name}`}
+              title="WhatsApp Chat"
+            >
+              💬
+            </a>
+          )}
           <button
             id={`add-${p.id}`}
             className="btn-add"
