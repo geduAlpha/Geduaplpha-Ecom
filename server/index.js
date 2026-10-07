@@ -227,7 +227,7 @@ const POSTING_PLANS = {
 
 // GET  /api/posting-plans  — return plan config to the frontend
 app.get("/api/posting-plans", (_req, res) => {
-  res.json({ plans: POSTING_PLANS, gateways: PAYMENT_GATEWAYS });
+  res.json({ plans: POSTING_PLANS });
 });
 
 // POST /api/listing-payment — validate payment ref, create product, record payment
