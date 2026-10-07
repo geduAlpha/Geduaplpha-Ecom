@@ -8,6 +8,7 @@ import mongoose from "mongoose";
 import { connectDB } from "./db.js";
 import Product from "./models/Product.js";
 import Order from "./models/Order.js";
+import PostingPayment from "./models/PostingPayment.js";
 
 dotenv.config();
 dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), ".env") });
@@ -214,6 +215,125 @@ app.get("/api/products/:id", requireDB, async (req, res) => {
     res.json({ id: _id, ...rest });
   } catch (err) {
     res.status(500).json({ error: "DB Error: " + err.message });
+  }
+});
+
+// ─── Posting Plans & Fees ─────────────────────────────────────────────────────
+const POSTING_PLANS = {
+  basic:    { name: "Basic",    price: 0,   posts: 1,  featured: false, photos: false, badge: "" },
+  standard: { name: "Standard", price: 99,  posts: 5,  featured: false, photos: true,  badge: "Standard" },
+  pro:      { name: "Pro",      price: 249, posts: -1, featured: true,  photos: true,  badge: "Pro Seller" },
+};
+
+// GET  /api/posting-plans  — return plan config to the frontend
+app.get("/api/posting-plans", (_req, res) => {
+  res.json({ plans: POSTING_PLANS, gateways: PAYMENT_GATEWAYS });
+});
+
+// POST /api/listing-payment — validate payment ref, create product, record payment
+app.post("/api/listing-payment", requireDB, async (req, res) => {
+  try {
+    const {
+      plan: planKey = "basic",
+      paymentMethod = "telebirr",
+      paymentRef = "",
+      sellerPhone = "",
+      product: productData = {},
+    } = req.body;
+
+    const plan = POSTING_PLANS[planKey];
+    if (!plan) return res.status(400).json({ error: "Invalid plan selected." });
+
+    // Paid plans must include a payment reference
+    if (plan.price > 0) {
+      if (!String(paymentRef).trim()) {
+        return res.status(400).json({ error: "Payment reference is required for paid plans." });
+      }
+      if (String(paymentRef).trim().length < 4) {
+        return res.status(400).json({ error: "Payment reference is too short. Enter the transaction ID from your payment." });
+      }
+      // Prevent exact duplicate reference (same phone + same ref)
+      const existing = await PostingPayment.findOne({
+        paymentRef: String(paymentRef).trim(),
+        sellerPhone: String(sellerPhone).trim(),
+      });
+      if (existing) {
+        return res.status(409).json({ error: "This payment reference has already been used. Each transaction can only be used once." });
+      }
+    }
+
+    // Validate product fields
+    const { name, category, price, description, seller = {}, image, art, color, tint, location = {}, negotiable, condition } = productData;
+    const errs = {};
+    if (!String(name || "").trim()) errs.name = "Item title is required";
+    if (!String(category || "").trim()) errs.category = "Category is required";
+    if (!price || isNaN(price) || Number(price) <= 0) errs.price = "Enter a valid price in ETB";
+    if (!String(description || "").trim()) errs.description = "Description is required";
+    if (!String(seller.phone || "").trim()) errs.phone = "Seller phone number is required";
+    if (Object.keys(errs).length) return res.status(400).json({ errors: errs });
+
+    // Image size guard
+    if (image && String(image).length > 800 * 1024) {
+      return res.status(400).json({ error: "Image is too large. Please use a smaller photo." });
+    }
+
+    // Build slug ID
+    const slugBase = String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
+    const uniqueSuffix = crypto.randomUUID().slice(0, 6);
+    const listingId = `${slugBase}-${uniqueSuffix}`;
+
+    // Create the product
+    const newProduct = await Product.create({
+      _id: listingId,
+      name: String(name).trim(),
+      category: String(category).trim(),
+      price: Number(price),
+      negotiable: Boolean(negotiable),
+      condition: String(condition || "Brand New").trim(),
+      stock: 1,
+      image: image ? String(image).trim() : null,
+      art: String(art || "notebook"),
+      color: String(color || "#2563EB"),
+      tint: String(tint || "#EFF6FF"),
+      description: String(description).trim(),
+      location: {
+        city: String(location.city || "Addis Ababa").trim(),
+        subcity: String(location.subcity || "Bole").trim(),
+      },
+      seller: {
+        name: String(seller.name || "Gedualpha Seller").trim(),
+        phone: String(seller.phone).trim(),
+        telegram: String(seller.telegram || "").replace(/^@/, "").trim(),
+        whatsapp: String(seller.whatsapp || "").trim(),
+        verified: planKey === "pro",  // Pro sellers get verified badge
+      },
+      views: 0,
+      featured: plan.featured,
+    });
+
+    // Record the payment
+    await PostingPayment.create({
+      _id: crypto.randomUUID().slice(0, 16),
+      plan: planKey,
+      amount: plan.price,
+      paymentMethod: plan.price > 0 ? String(paymentMethod).trim() : "free",
+      paymentRef: plan.price > 0 ? String(paymentRef).trim() : "FREE",
+      sellerPhone: String(seller.phone || sellerPhone).trim(),
+      status: plan.price === 0 ? "verified" : "pending",
+      productId: listingId,
+    });
+
+    const { _id, __v, ...rest } = newProduct.toObject();
+    res.status(201).json({
+      id: _id,
+      ...rest,
+      plan: planKey,
+      planName: plan.name,
+      featured: plan.featured,
+    });
+  } catch (err) {
+    console.error("Listing payment error:", err);
+    res.status(500).json({ error: "Failed to create listing: " + err.message });
   }
 });
 
