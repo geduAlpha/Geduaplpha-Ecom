@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --watch index.js",
     "start": "node index.js",
+    "server": "node index.js",
     "seed": "node database/seed.js"
   },
   "dependencies": {

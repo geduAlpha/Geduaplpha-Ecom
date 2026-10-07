@@ -10,7 +10,9 @@
     "postinstall": "npm install --prefix server && npm install --prefix client",
     "build": "npm run build --prefix client",
     "start": "node server/index.js",
-    "dev": "node server/index.js"
+    "dev": "node server/index.js",
+    "server": "node server/index.js",
+    "client": "npm run dev --prefix client"
   },
   "dependencies": {
     "cors": "^2.8.5",

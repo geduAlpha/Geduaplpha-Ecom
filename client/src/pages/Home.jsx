@@ -28,11 +28,12 @@ const CONDITIONS = [
   { value: "Brand New", label: "Brand New" },
   { value: "Like New", label: "Like New" },
   { value: "Used", label: "Used" },
-  { value: "Refurbished", label: "Refurbished" },
+  { value: "Under building", label: "Under building" },
+  { value: "Finished", label: "Finished" },
 ];
 
 const POPULAR_TAGS = [
-  "iPhone 15",
+  "iPhone 17",
   "Toyota Vitz",
   "Bole Apartment",
   "MacBook Pro",

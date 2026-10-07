@@ -1156,7 +1156,7 @@ export default function Admin() {
                     <option value="Brand New">Brand New</option>
                     <option value="Like New">Like New</option>
                     <option value="Used">Used</option>
-                    <option value="Refurbished">Refurbished</option>
+                    <option value="Finished">Finished</option>
                   </select>
                 </div>
 

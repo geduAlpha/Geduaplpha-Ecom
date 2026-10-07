@@ -11,7 +11,7 @@ const toJSON = {
 
 const locationSchema = new mongoose.Schema(
   {
-    city:    { type: String, default: "Addis Ababa" },
+    city: { type: String, default: "Addis Ababa" },
     subcity: { type: String, default: "Bole" },
   },
   { _id: false }
@@ -19,8 +19,8 @@ const locationSchema = new mongoose.Schema(
 
 const sellerSchema = new mongoose.Schema(
   {
-    name:     { type: String, default: "Gedualpha Seller" },
-    phone:    { type: String, default: "+251912627366" },
+    name: { type: String, default: "Gedualpha Seller" },
+    phone: { type: String, default: "+251912627366" },
     telegram: { type: String, default: "greatestvalue" },
     whatsapp: { type: String, default: "+251941645784" },
     verified: { type: Boolean, default: true },
@@ -30,22 +30,22 @@ const sellerSchema = new mongoose.Schema(
 
 const productSchema = new mongoose.Schema(
   {
-    _id:         { type: String },          // slug or unique id
-    name:        { type: String, required: true },
-    category:    { type: String, required: true },
-    price:       { type: Number, required: true }, // price in ETB (Birr)
-    negotiable:  { type: Boolean, default: false },
-    condition:   { type: String, default: "Brand New" }, // Brand New, Like New, Used, Refurbished
-    stock:       { type: Number, required: true, default: 1 },
-    art:         { type: String, required: true, default: "notebook" },
-    color:       { type: String, required: true, default: "#1E3A8A" },
-    tint:        { type: String, required: true, default: "#EFF6FF" },
+    _id: { type: String },          // slug or unique id
+    name: { type: String, required: true },
+    category: { type: String, required: true },
+    price: { type: Number, required: true }, // price in ETB (Birr)
+    negotiable: { type: Boolean, default: false },
+    condition: { type: String, default: "Brand New" }, // Brand New, Like New, Used, Finished
+    stock: { type: Number, required: true, default: 1 },
+    art: { type: String, required: true, default: "notebook" },
+    color: { type: String, required: true, default: "#1E3A8A" },
+    tint: { type: String, required: true, default: "#EFF6FF" },
     description: { type: String, required: true },
-    location:    { type: locationSchema, default: () => ({ city: "Addis Ababa", subcity: "Bole" }) },
-    seller:      { type: sellerSchema, default: () => ({ name: "Gedualpha Seller", phone: "+251912627366", telegram: "greatestvalue", whatsapp: "+251941645784", verified: true }) },
-    image:       { type: String, default: null },
-    views:       { type: Number, default: 0 },
-    featured:    { type: Boolean, default: false },
+    location: { type: locationSchema, default: () => ({ city: "Addis Ababa", subcity: "Bole" }) },
+    seller: { type: sellerSchema, default: () => ({ name: "Gedualpha Seller", phone: "+251912627366", telegram: "greatestvalue", whatsapp: "+251941645784", verified: true }) },
+    image: { type: String, default: null },
+    views: { type: Number, default: 0 },
+    featured: { type: Boolean, default: false },
   },
   { timestamps: true, toJSON }
 );
