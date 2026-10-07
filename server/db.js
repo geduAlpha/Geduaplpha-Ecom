@@ -17,7 +17,13 @@ if (!uri) {
 }
 
 export async function connectDB() {
-  await mongoose.connect(uri, { serverSelectionTimeoutMS: 8000 });
+  await mongoose.connect(uri, {
+    serverSelectionTimeoutMS: 10000,  // give Atlas 10s to respond on cold start
+    socketTimeoutMS: 45000,           // drop dead sockets after 45s
+    heartbeatFrequencyMS: 10000,      // ping Atlas every 10s to keep connection alive
+    maxPoolSize: 10,
+    retryWrites: true,
+  });
   console.log("MongoDB connected:", mongoose.connection.host);
 }
 

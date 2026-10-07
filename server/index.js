@@ -67,7 +67,7 @@ app.get("/api/locations", (_req, res) => {
   res.json({ cities: CITIES });
 });
 
-app.get("/api/categories", async (_req, res) => {
+app.get("/api/categories", requireDB, async (_req, res) => {
   try {
     const counts = await Product.aggregate([
       { $group: { _id: "$category", count: { $sum: 1 } } }
@@ -85,8 +85,26 @@ app.get("/api/categories", async (_req, res) => {
   }
 });
 
+// ─── DB-ready middleware for all data routes ─────────────────────────────────
+async function requireDB(req, res, next) {
+  const state = mongoose.connection.readyState;
+  // 1 = connected, 2 = connecting
+  if (state === 0 || state === 3) {
+    // disconnected or disconnecting — try to reconnect
+    try {
+      await connectDB();
+    } catch (e) {
+      return res.status(503).json({ error: "Database unavailable, please retry in a moment." });
+    }
+  }
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ error: "Database is connecting, please retry in a moment." });
+  }
+  next();
+}
+
 // ─── Marketplace Catalogue ───────────────────────────────────────────────────
-app.get("/api/products", async (req, res) => {
+app.get("/api/products", requireDB, async (req, res) => {
   try {
     const {
       q = "",
@@ -141,27 +159,50 @@ app.get("/api/products", async (req, res) => {
     };
     const sortBy = sortMap[sort] || { featured: -1, createdAt: -1 };
 
-    const [total, docs] = await Promise.all([
-      Product.countDocuments(filter),
-      Product.find(filter).sort(sortBy).skip(offset).limit(size).lean(),
-    ]);
+    // Helper to run the actual query — used for first attempt and reconnect retry
+    const runQuery = async () => {
+      const [total, docs] = await Promise.all([
+        Product.countDocuments(filter),
+        Product.find(filter).sort(sortBy).skip(offset).limit(size).lean(),
+      ]);
+      const items = docs.map(({ _id, __v, ...rest }) => ({ id: _id, ...rest }));
+      return { total, items };
+    };
 
-    const items = docs.map(({ _id, __v, ...rest }) => ({ id: _id, ...rest }));
+    let result;
+    try {
+      result = await runQuery();
+    } catch (queryErr) {
+      // Stale / dropped connection — try to reconnect once and retry
+      const isConnErr = /not connected|ECONNRESET|ETIMEDOUT|topology|buffering timed out/i.test(queryErr.message);
+      if (isConnErr) {
+        try {
+          await connectDB();
+          result = await runQuery();
+        } catch (retryErr) {
+          console.error("Products retry after reconnect failed:", retryErr.message);
+          return res.status(503).json({ error: "Database unavailable, please retry in a moment." });
+        }
+      } else {
+        console.error("Products query error:", queryErr.message);
+        return res.status(500).json({ error: "DB Error: " + queryErr.message });
+      }
+    }
 
     res.json({
-      total,
+      total: result.total,
       page: pageNum,
-      pages: Math.max(1, Math.ceil(total / size)),
-      items,
+      pages: Math.max(1, Math.ceil(result.total / size)),
+      items: result.items,
     });
   } catch (err) {
-    console.error("Products error:", err);
+    console.error("Products route error:", err);
     res.status(500).json({ error: "DB Error: " + err.message });
   }
 });
 
 // ─── Product Detail & View Counter ───────────────────────────────────────────
-app.get("/api/products/:id", async (req, res) => {
+app.get("/api/products/:id", requireDB, async (req, res) => {
   try {
     const doc = await Product.findByIdAndUpdate(
       req.params.id,
@@ -177,7 +218,7 @@ app.get("/api/products/:id", async (req, res) => {
 });
 
 // ─── Post / Sell a Listing ────────────────────────────────────────────────────
-app.post("/api/products", async (req, res) => {
+app.post("/api/products", requireDB, async (req, res) => {
   try {
     const {
       name,
@@ -577,6 +618,11 @@ app.post("/api/admin/products", async (req, res) => {
       return res.status(400).json({ error: "Name, category, and price are required" });
     }
 
+    // Guard against oversized image payloads (base64 > 800 KB causes proxy rejections)
+    if (image && String(image).length > 800 * 1024) {
+      return res.status(400).json({ error: "Image is too large. Please use a smaller photo (max ~600 KB after compression)." });
+    }
+
     const slugBase = String(name)
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
@@ -626,6 +672,11 @@ app.put("/api/admin/products/:id", async (req, res) => {
     delete updateData._id;
     delete updateData.id;
     delete updateData.__v;
+
+    // Guard against oversized image payloads
+    if (updateData.image && String(updateData.image).length > 800 * 1024) {
+      return res.status(400).json({ error: "Image is too large. Please use a smaller photo (max ~600 KB after compression)." });
+    }
 
     if (updateData.price !== undefined) updateData.price = Number(updateData.price);
     if (updateData.stock !== undefined) updateData.stock = Math.max(0, parseInt(updateData.stock, 10) || 0);
@@ -742,15 +793,34 @@ process.on("unhandledRejection", (reason) => {
   console.error("Unhandled rejection:", reason);
 });
 
-// ─── Start server immediately on PORT, then connect to MongoDB ───────────────
-const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
-});
+// ─── Start server: connect to MongoDB first, then begin accepting requests ────
+async function startServer() {
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      await connectDB();
+      break;
+    } catch (err) {
+      retries--;
+      console.error(`MongoDB connection failed (${3 - retries}/3):`, err.message);
+      if (retries === 0) {
+        console.error("Could not connect to MongoDB after 3 attempts. Starting anyway — routes will return 503 until DB is available.");
+      } else {
+        await new Promise((r) => setTimeout(r, 3000)); // wait 3s before retry
+      }
+    }
+  }
 
-server.on("error", (err) => {
-  console.error("HTTP server error:", err);
-});
+  app.listen(PORT, "0.0.0.0", () => {
+    const dbState = mongoose.connection.readyState === 1 ? "MongoDB ready" : "WARNING: MongoDB NOT connected";
+    console.log(`Server running on http://0.0.0.0:${PORT} — ${dbState}`);
+  });
+}
 
-connectDB().catch((err) => {
-  console.error("MongoDB initial connection error:", err.message);
+startServer();
+
+// Auto-reconnect on dropped connection (e.g. Atlas idle timeout)
+mongoose.connection.on("disconnected", () => {
+  console.warn("MongoDB disconnected — attempting reconnect…");
+  connectDB().catch((e) => console.error("Reconnect failed:", e.message));
 });

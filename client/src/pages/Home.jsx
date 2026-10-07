@@ -76,30 +76,25 @@ function XIcon() {
 
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [category, setCategory] = useState(searchParams.get("category") || "all");
-  const [city, setCity] = useState(searchParams.get("city") || "all");
-  const [condition, setCondition] = useState(searchParams.get("condition") || "all");
-  const [minPrice, setMinPrice] = useState(searchParams.get("minPrice") || "");
-  const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
-  const [sort, setSort] = useState(searchParams.get("sort") || "featured");
-  const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("loading");
   const [filterOpen, setFilterOpen] = useState(false);
   const [locations, setLocations] = useState([]);
 
-  const q = searchParams.get("q") || "";
+  // ── Derive all filter values directly from the URL — no intermediate state ──
+  const q        = searchParams.get("q")         || "";
+  const category = searchParams.get("category")  || "all";
+  const city     = searchParams.get("city")       || "all";
+  const condition= searchParams.get("condition")  || "all";
+  const minPrice = searchParams.get("minPrice")   || "";
+  const maxPrice = searchParams.get("maxPrice")   || "";
+  const sort     = searchParams.get("sort")       || "featured";
+  const page     = Number(searchParams.get("page")) || 1;
 
-  // Sync state when searchParams change in URL
-  useEffect(() => {
-    setCategory(searchParams.get("category") || "all");
-    setCity(searchParams.get("city") || "all");
-    setCondition(searchParams.get("condition") || "all");
-    setMinPrice(searchParams.get("minPrice") || "");
-    setMaxPrice(searchParams.get("maxPrice") || "");
-    setSort(searchParams.get("sort") || "featured");
-    setPage(1);
-  }, [searchParams]);
+  // ── Price inputs need local state so the user can type before hitting Apply ──
+  const [localMin, setLocalMin] = useState(minPrice);
+  const [localMax, setLocalMax] = useState(maxPrice);
+
 
   useEffect(() => {
     const ac = new AbortController();
@@ -108,6 +103,14 @@ export default function Home() {
       .catch(() => { });
     return () => ac.abort();
   }, []);
+
+  // Keep local price inputs in sync when URL changes externally (back/forward)
+  useEffect(() => {
+    setLocalMin(searchParams.get("minPrice") || "");
+    setLocalMax(searchParams.get("maxPrice") || "");
+  }, [searchParams]);
+
+  const [errorMsg, setErrorMsg] = useState("");
 
   const load = useCallback(() => {
     const controller = new AbortController();
@@ -121,9 +124,15 @@ export default function Home() {
       .then((d) => {
         setData(d);
         setStatus("ready");
+        setErrorMsg("");
       })
       .catch((err) => {
-        if (err.name !== "AbortError") setStatus("error");
+        if (err.name !== "AbortError") {
+          console.error("[Home] products fetch failed:", err.message);
+          setErrorMsg(err.message || "Unknown error");
+          setStatus("error");
+          setData(null);
+        }
       });
 
     return () => controller.abort();
@@ -131,26 +140,40 @@ export default function Home() {
 
   useEffect(load, [load]);
 
+  // Auto-retry when DB is still connecting (503) — try again after 3 seconds
+  useEffect(() => {
+    if (status !== "error" || !errorMsg.includes("connecting")) return;
+    const t = setTimeout(() => load(), 3000);
+    return () => clearTimeout(t);
+  }, [status, errorMsg, load]);
+
   const setCategory_ = (v) => {
-    setCategory(v);
-    setPage(1);
     const p = new URLSearchParams(searchParams);
+    p.delete("page");
     if (v === "all") p.delete("category"); else p.set("category", v);
     setSearchParams(p);
   };
   const setCity_ = (v) => {
-    setCity(v);
-    setPage(1);
     const p = new URLSearchParams(searchParams);
+    p.delete("page");
     if (v === "all") p.delete("city"); else p.set("city", v);
     setSearchParams(p);
   };
-  const setSort_ = (v) => { setSort(v); setPage(1); };
-  const setCondition_ = (v) => { setCondition(v); setPage(1); };
+  const setSort_ = (v) => {
+    const p = new URLSearchParams(searchParams);
+    p.delete("page");
+    if (v === "featured") p.delete("sort"); else p.set("sort", v);
+    setSearchParams(p);
+  };
+  const setCondition_ = (v) => {
+    const p = new URLSearchParams(searchParams);
+    p.delete("page");
+    if (v === "all") p.delete("condition"); else p.set("condition", v);
+    setSearchParams(p);
+  };
 
   function handleTagClick(tag) {
     setSearchParams({ q: tag });
-    setPage(1);
   }
 
   function handleHeroSearch(e) {
@@ -165,9 +188,6 @@ export default function Home() {
     if (cityVal && cityVal !== "all") newParams.city = cityVal;
 
     setSearchParams(newParams);
-    if (catVal) setCategory(catVal);
-    if (cityVal) setCity(cityVal);
-    setPage(1);
   }
 
   function FilterPanel({ onClose }) {
@@ -242,23 +262,30 @@ export default function Home() {
               type="number"
               placeholder="Min ETB"
               className="price-filter-input"
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
+              value={localMin}
+              onChange={(e) => setLocalMin(e.target.value)}
             />
             <span>–</span>
             <input
               type="number"
               placeholder="Max ETB"
               className="price-filter-input"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
+              value={localMax}
+              onChange={(e) => setLocalMax(e.target.value)}
             />
           </div>
           <button
             type="button"
             className="btn btn-accent btn-sm"
             style={{ width: "100%", marginTop: "0.5rem" }}
-            onClick={() => { setPage(1); load(); onClose?.(); }}
+            onClick={() => {
+              const p = new URLSearchParams(searchParams);
+              p.delete("page");
+              if (localMin) p.set("minPrice", localMin); else p.delete("minPrice");
+              if (localMax) p.set("maxPrice", localMax); else p.delete("maxPrice");
+              setSearchParams(p);
+              onClose?.();
+            }}
           >
             Apply Price
           </button>
@@ -407,9 +434,19 @@ export default function Home() {
 
             {/* States */}
             {status === "error" && (
-              <p className="notice" role="alert">
-                ⚠️ Couldn't load marketplace listings. Please make sure the server is running.
-              </p>
+              <div className="notice" role="alert" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", padding: "2rem", textAlign: "center" }}>
+                <p style={{ fontWeight: 600 }}>⚠️ Couldn't load listings</p>
+                <p style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                  {errorMsg.includes("connecting")
+                    ? "The database is warming up. Retrying automatically…"
+                    : errorMsg.includes("Network error")
+                    ? "Network error — check your connection or the server may be offline."
+                    : errorMsg || "An unexpected error occurred."}
+                </p>
+                <button className="btn btn-accent btn-sm" onClick={() => load()}>
+                  🔄 Retry Now
+                </button>
+              </div>
             )}
 
             {status === "ready" && data.items.length === 0 && (
@@ -437,7 +474,12 @@ export default function Home() {
                   id="prev-page-btn"
                   className="btn btn-ghost btn-sm"
                   disabled={page <= 1}
-                  onClick={() => { setPage(page - 1); window.scrollTo({ top: 400, behavior: "smooth" }); }}
+                  onClick={() => {
+                    const p = new URLSearchParams(searchParams);
+                    p.set("page", page - 1);
+                    setSearchParams(p);
+                    window.scrollTo({ top: 400, behavior: "smooth" });
+                  }}
                 >
                   ← Previous
                 </button>
@@ -448,7 +490,12 @@ export default function Home() {
                   id="next-page-btn"
                   className="btn btn-ghost btn-sm"
                   disabled={page >= data.pages}
-                  onClick={() => { setPage(page + 1); window.scrollTo({ top: 400, behavior: "smooth" }); }}
+                  onClick={() => {
+                    const p = new URLSearchParams(searchParams);
+                    p.set("page", page + 1);
+                    setSearchParams(p);
+                    window.scrollTo({ top: 400, behavior: "smooth" });
+                  }}
                 >
                   Next →
                 </button>

@@ -10,8 +10,8 @@
     "postinstall": "npm install --prefix server && npm install --prefix client",
     "build": "npm run build --prefix client",
     "start": "node server/index.js",
-    "dev": "node server/index.js",
-    "server": "node server/index.js",
+    "dev": "concurrently --kill-others-on-fail --names \"server,client\" --prefix-colors \"cyan,magenta\" \"node --watch server/index.js\" \"npm run dev --prefix client\"",
+    "server": "node --watch server/index.js",
     "client": "npm run dev --prefix client"
   },
   "dependencies": {
@@ -19,5 +19,8 @@
     "dotenv": "^18.0.5",
     "express": "^4.19.2",
     "mongoose": "^8.24.5"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
   }
 }

@@ -217,11 +217,20 @@ export default function Admin() {
 
   function handleImageFile(file) {
     if (!file || !file.type.startsWith("image/")) return;
+
+    // Guard: raw file over 5MB is almost certainly going to exceed limits
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image is too large (max 5 MB). Please choose a smaller photo.");
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const maxDim = 1200;
+        // Keep max dimension at 800px — enough for product thumbnails,
+        // well within the ~700 KB base64 budget we allow.
+        const maxDim = 800;
         let w = img.width;
         let h = img.height;
         if (w > maxDim || h > maxDim) {
@@ -238,7 +247,23 @@ export default function Admin() {
         canvas.height = h;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+
+        // Try progressively lower quality until the base64 fits under 700 KB
+        // (base64 overhead is ~33%, so 700 KB base64 ≈ ~525 KB binary)
+        const MAX_BASE64 = 700 * 1024; // characters ≈ bytes for ASCII base64
+        let quality = 0.72;
+        let dataUrl = canvas.toDataURL("image/jpeg", quality);
+
+        while (dataUrl.length > MAX_BASE64 && quality > 0.3) {
+          quality = Math.round((quality - 0.1) * 10) / 10;
+          dataUrl = canvas.toDataURL("image/jpeg", quality);
+        }
+
+        if (dataUrl.length > MAX_BASE64) {
+          alert("Image is still too large after compression. Please use a smaller or simpler photo.");
+          return;
+        }
+
         setProdForm((prev) => ({ ...prev, image: dataUrl }));
       };
       img.src = e.target.result;

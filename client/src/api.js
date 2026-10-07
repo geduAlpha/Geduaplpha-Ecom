@@ -1,11 +1,19 @@
 async function request(path, options = {}) {
-  const res = await fetch(`/api${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+  let res;
+  try {
+    res = await fetch(`/api${path}`, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+  } catch (networkErr) {
+    throw Object.assign(new Error("Network error — server may be offline or the request was too large"), { status: 0 });
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw Object.assign(new Error("Request failed"), { errors: data.errors, status: res.status });
+    // Surface the actual server error message so the UI can show it
+    const serverMsg = data.error || data.message || (data.errors ? JSON.stringify(data.errors) : null);
+    const displayMsg = serverMsg || `Server error (HTTP ${res.status})`;
+    throw Object.assign(new Error(displayMsg), { errors: data.errors, status: res.status, raw: data });
   }
   return data;
 }
