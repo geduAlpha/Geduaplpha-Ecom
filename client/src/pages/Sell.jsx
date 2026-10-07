@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { api } from "../api.js";
 import ProductArt from "../components/ProductArt.jsx";
 import { money } from "../money.js";
+import { useUser } from "../UserContext.jsx";
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
 const CATEGORIES = [
@@ -70,7 +71,9 @@ const STEPS = [
 
 /* ══════════════════════════════════════════════════════════════════════════ */
 export default function Sell() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const { user, openSignup } = useUser();
+
   const [locations, setLocations]   = useState([]);
   const [errors,    setErrors]      = useState({});
   const [dragActive, setDragActive] = useState(false);
@@ -207,6 +210,51 @@ export default function Sell() {
   }
 
   /* ══════════════════════════════════════════════════════════════════════ */
+  /* ── Role gate: buyers cannot post listings ── */
+  if (user && user.role === "buyer") {
+    return (
+      <div className="sell-gate">
+        <div className="sell-gate-card">
+          <div className="sell-gate-icon">🚫</div>
+          <h2 className="sell-gate-title">Posting Not Available for Buyers</h2>
+          <p className="sell-gate-body">
+            Your account is registered as a <strong>Buyer</strong>. Buyer accounts
+            can browse and order products, but cannot post listings.
+            To post items, you need a Seller or Business account.
+          </p>
+          <div className="sell-gate-roles">
+            <div className="sell-gate-role">
+              <span>🏪</span>
+              <div>
+                <strong>Seller</strong>
+                <p>Post individual items for sale</p>
+              </div>
+            </div>
+            <div className="sell-gate-role">
+              <span>🏢</span>
+              <div>
+                <strong>Business</strong>
+                <p>Verified store with unlimited listings</p>
+              </div>
+            </div>
+          </div>
+          <div className="sell-gate-actions">
+            <button className="btn btn-accent" onClick={openSignup}>
+              Create a Seller Account
+            </button>
+            <Link to="/" className="btn btn-ghost">
+              ← Back to Marketplace
+            </Link>
+          </div>
+          <p className="sell-gate-note">
+            Already have a seller account?{" "}
+            <button className="sell-gate-link" onClick={openSignup}>Log in here</button>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* ── Hero banner ─────────────────────────────────────────────────── */}

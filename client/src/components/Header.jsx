@@ -149,9 +149,12 @@ export default function Header() {
 
             {/* Actions */}
             <div className="header-actions">
-              <Link to="/sell" className="sell-btn" title="Post a free ad">
-                <TagIcon /><span>+ Post Ad</span>
-              </Link>
+              {/* Post Ad — hidden for buyers */}
+              {(!user || user.role !== "buyer") && (
+                <Link to="/sell" className="sell-btn" title="Post a free ad">
+                  <TagIcon /><span>+ Post Ad</span>
+                </Link>
+              )}
 
               {/* ── User auth area ── */}
               {user ? (
@@ -181,7 +184,12 @@ export default function Header() {
                         </div>
                       </div>
                       <div className="hdr-user-menu-items">
-                        <Link to="/sell" className="hum-item" onClick={() => setUserMenuOpen(false)}>🏪 My Listings</Link>
+                        {user.role !== "buyer" && (
+                          <Link to="/sell" className="hum-item" onClick={() => setUserMenuOpen(false)}>🏪 My Listings</Link>
+                        )}
+                        {user.role === "buyer" && (
+                          <Link to="/my-orders" className="hum-item" onClick={() => setUserMenuOpen(false)}>📦 My Orders</Link>
+                        )}
                         <button className="hum-item hum-item-danger" onClick={handleUserLogout}><LogoutIcon /> Sign Out</button>
                       </div>
                     </div>

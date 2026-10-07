@@ -233,6 +233,16 @@ export default function Admin() {
     } catch (err) { alert("Update failed: " + err.message); }
   }
 
+  async function handleConfirmPayment(orderId) {
+    if (!confirm(`Confirm payment for order #${orderId}? This will mark it as PAID.`)) return;
+    try {
+      const updated = await api.adminConfirmPayment(orderId);
+      notify(`✅ Payment confirmed — Order #${orderId} is now PAID`);
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, ...updated } : o));
+      loadStats();
+    } catch (err) { alert("Confirmation failed: " + err.message); }
+  }
+
   async function handleDeleteOrder(id) {
     if (!confirm(`Delete order #${id}?`)) return;
     try { await api.adminDeleteOrder(id); notify(`🗑️ Order #${id} deleted.`); loadOrders(); loadStats(); }
@@ -604,19 +614,19 @@ export default function Admin() {
                 <table className="adm-table">
                   <thead><tr>
                     <th>Order ID</th><th>Customer</th><th>Items</th>
-                    <th>Total</th><th>Gateway</th><th>Status</th><th>Date</th><th>Actions</th>
+                    <th>Total</th><th>Gateway</th><th>Payment Ref</th><th>Status</th><th>Date</th><th>Actions</th>
                   </tr></thead>
                   <tbody>
                     {orderLoading ? (
-                      <tr><td colSpan="8" className="adm-empty">Loading…</td></tr>
+                      <tr><td colSpan="9" className="adm-empty">Loading…</td></tr>
                     ) : orders.length === 0 ? (
-                      <tr><td colSpan="8" className="adm-empty">No orders found.</td></tr>
+                      <tr><td colSpan="9" className="adm-empty">No orders found.</td></tr>
                     ) : orders.map((o) => (
                       <tr key={o.id}>
                         <td><strong>#{o.id?.slice(0,10)}</strong></td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{o.customer?.name}</div>
-                          <div className="adm-cell-sub">{o.customer?.phone}</div>
+                          <div className="adm-cell-sub">{o.customer?.postal}</div>
                         </td>
                         <td>
                           {o.items?.slice(0,2).map((it, i) => (
@@ -626,6 +636,26 @@ export default function Admin() {
                         </td>
                         <td><strong>{money(o.total)}</strong></td>
                         <td><span className="adm-badge-gw">{o.paymentMethod || "—"}</span></td>
+                        <td>
+                          {o.paymentRef ? (
+                            <div className="adm-ref-cell">
+                              <code className="adm-ref-code">{o.paymentRef}</code>
+                              {o.paymentConfirmed
+                                ? <span className="adm-ref-confirmed">✅ Confirmed</span>
+                                : (o.paymentMethod === "telebirr" || o.paymentMethod === "cbe") && (
+                                  <button
+                                    className="adm-confirm-pay-btn"
+                                    onClick={() => handleConfirmPayment(o.id)}
+                                    title="Confirm this payment reference and mark as Paid"
+                                  >
+                                    ✓ Confirm
+                                  </button>
+                                )}
+                            </div>
+                          ) : (
+                            <span className="adm-cell-sub" style={{ color: "#ef4444" }}>No ref</span>
+                          )}
+                        </td>
                         <td>
                           <select
                             className={`adm-status-select ${o.status}`}

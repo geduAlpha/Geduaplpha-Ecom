@@ -32,7 +32,7 @@ const customerSchema = new mongoose.Schema(
 
 const orderSchema = new mongoose.Schema(
   {
-    _id:           { type: String },   // 8-char uppercase random ID e.g. "A1B2C3D4"
+    _id:           { type: String },
     customer:      { type: customerSchema, required: true },
     items:         { type: [orderItemSchema], required: true },
     subtotal:      { type: Number, required: true },
@@ -42,6 +42,13 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: { type: String, default: "telebirr" },
     paymentRef:    { type: String, default: "" },
     notes:         { type: String, default: "" },
+    // Buyer identity — populated when a logged-in user places the order
+    userId:        { type: String, default: null },
+    buyerEmail:    { type: String, default: "" },
+    buyerPhone:    { type: String, default: "" },
+    // Payment confirmation tracking
+    paymentConfirmed:   { type: Boolean, default: false },
+    paymentConfirmedAt: { type: Date, default: null },
   },
   { timestamps: true, toJSON }
 );

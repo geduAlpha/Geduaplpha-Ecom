@@ -37,6 +37,10 @@ export const api = {
   authLogin:    (body)  => request("/auth/login",    { method: "POST", body: JSON.stringify(body) }),
   authMe:       (token) => request("/auth/me", { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }),
   createOrder: (body) => request("/orders", { method: "POST", body: JSON.stringify(body) }),
+  getOrder:    (id)   => request(`/orders/${id}`),
+  getMyOrders: (userId, token) => request(`/orders/by-user/${userId}`, {
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+  }),
   paymentConfig: (signal) => request("/payments/config", { signal }),
   initializeChapa: (body) => request("/payments/chapa/initialize", { method: "POST", body: JSON.stringify(body) }),
   verifyChapa: (tx_ref) => request(`/payments/chapa/verify/${tx_ref}`),
@@ -60,5 +64,6 @@ export const api = {
     return request(`/admin/orders?${new URLSearchParams(cleanParams)}`, { signal });
   },
   adminUpdateOrder: (id, body) => request(`/admin/orders/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  adminConfirmPayment: (id) => request(`/admin/orders/${id}`, { method: "PUT", body: JSON.stringify({ confirmPayment: true }) }),
   adminDeleteOrder: (id) => request(`/admin/orders/${id}`, { method: "DELETE" }),
 };

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { api } from "../api.js";
 import ProductCard from "../components/ProductCard.jsx";
+import { useUser } from "../UserContext.jsx";
 
 const CATEGORIES = [
   { value: "all", label: "All Items", icon: "🏪", colorClass: "c-gray" },
@@ -76,6 +77,8 @@ function XIcon() {
 
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useUser();
+  const canSell = !user || user.role !== "buyer";
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("loading");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -418,9 +421,11 @@ export default function Home() {
               </div>
 
               <div className="toolbar-right">
-                <Link to="/sell" className="sell-cta-btn-sm" id="post-ad-toolbar-btn">
-                  + Post Free Ad
-                </Link>
+                {canSell && (
+                  <Link to="/sell" className="sell-cta-btn-sm" id="post-ad-toolbar-btn">
+                    + Post Free Ad
+                  </Link>
+                )}
                 <button
                   className="filter-toggle"
                   id="filter-toggle-btn"
@@ -454,9 +459,11 @@ export default function Home() {
                 <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}>🔍</div>
                 <h3>No listings found</h3>
                 <p>Try searching for a different keyword or removing active filters.</p>
-                <Link to="/sell" className="btn btn-accent mt-4">
-                  Be the first to list an item in this category!
-                </Link>
+                {canSell && (
+                  <Link to="/sell" className="btn btn-accent mt-4">
+                    Be the first to list an item in this category!
+                  </Link>
+                )}
               </div>
             )}
 

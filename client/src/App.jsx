@@ -1,6 +1,7 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { UserProvider } from "./UserContext.jsx";
+import { useUser } from "./UserContext.jsx";
 import Header from "./components/Header.jsx";
 import CartDrawer from "./components/CartDrawer.jsx";
 import Footer from "./components/Footer.jsx";
@@ -9,6 +10,7 @@ import Product from "./pages/Product.jsx";
 import Checkout from "./pages/Checkout.jsx";
 import Sell from "./pages/Sell.jsx";
 import Admin from "./pages/Admin.jsx";
+import MyOrders from "./pages/MyOrders.jsx";
 
 function NotFound() {
   return (
@@ -19,6 +21,15 @@ function NotFound() {
       <a className="btn btn-accent mt-4" href="/">Back to the marketplace</a>
     </div>
   );
+}
+
+/* Buyers are redirected to / — only seller/business (or guests) can access /sell */
+function SellerRoute({ children }) {
+  const { user } = useUser();
+  if (user && user.role === "buyer") {
+    return <Navigate to="/" replace />;
+  }
+  return children;
 }
 
 export default function App() {
@@ -35,7 +46,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/product/:id" element={<Product />} />
-          <Route path="/sell" element={<Sell />} />
+          <Route path="/sell" element={<SellerRoute><Sell /></SellerRoute>} />
+          <Route path="/my-orders" element={<MyOrders />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />

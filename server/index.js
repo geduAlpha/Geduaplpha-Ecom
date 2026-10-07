@@ -519,7 +519,7 @@ app.post("/api/products", requireDB, async (req, res) => {
 const emailOk = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
 app.post("/api/orders", async (req, res) => {
-  const { customer = {}, items = [], paymentMethod = "telebirr", paymentRef = "", notes = "" } = req.body ?? {};
+  const { customer = {}, items = [], paymentMethod = "telebirr", paymentRef = "", notes = "", userId = null, buyerPhone = "" } = req.body ?? {};
   const errors = {};
 
   for (const field of ["name", "address", "city", "postal"]) {
@@ -574,7 +574,7 @@ app.post("/api/orders", async (req, res) => {
         city: customer.city.trim(),
         postal: customer.postal.trim(),
       },
-      items: lines,   // embedded in the order document
+      items: lines,
       subtotal,
       shipping,
       total: subtotal + shipping,
@@ -582,6 +582,9 @@ app.post("/api/orders", async (req, res) => {
       paymentMethod: String(paymentMethod || "telebirr").trim(),
       paymentRef: String(paymentRef || "").trim(),
       notes: String(notes || "").trim(),
+      userId: userId || null,
+      buyerEmail: customer.email ? customer.email.trim() : "",
+      buyerPhone: String(buyerPhone || customer.postal || "").trim(),
     });
 
     res.status(201).json({
@@ -593,6 +596,8 @@ app.post("/api/orders", async (req, res) => {
       total: subtotal + shipping,
       status: order.status,
       paymentMethod: order.paymentMethod,
+      paymentRef: order.paymentRef,
+      paymentConfirmed: order.paymentConfirmed,
       createdAt: order.createdAt,
     });
   } catch (err) {
@@ -617,6 +622,19 @@ app.get("/api/orders/:id", async (req, res) => {
     if (!doc) return res.status(404).json({ error: "Order not found" });
     const { _id, __v, ...rest } = doc;
     res.json({ id: _id, ...rest });
+  } catch (err) {
+    res.status(500).json({ error: "DB Error: " + err.message });
+  }
+});
+
+// GET /api/orders/by-user/:userId — fetch all orders for a logged-in buyer
+app.get("/api/orders/by-user/:userId", requireDB, async (req, res) => {
+  try {
+    const docs = await Order.find({ userId: req.params.userId })
+      .sort({ createdAt: -1 })
+      .lean();
+    const items = docs.map(({ _id, __v, ...rest }) => ({ id: _id, ...rest }));
+    res.json({ orders: items });
   } catch (err) {
     res.status(500).json({ error: "DB Error: " + err.message });
   }
@@ -964,12 +982,25 @@ app.get("/api/admin/orders", async (req, res) => {
 
 app.put("/api/admin/orders/:id", async (req, res) => {
   try {
-    const { status, paymentMethod, paymentRef, notes } = req.body;
+    const { status, paymentMethod, paymentRef, notes, confirmPayment } = req.body;
     const update = {};
-    if (status !== undefined) update.status = status;
+    if (status        !== undefined) update.status        = status;
     if (paymentMethod !== undefined) update.paymentMethod = paymentMethod;
-    if (paymentRef !== undefined) update.paymentRef = paymentRef;
-    if (notes !== undefined) update.notes = notes;
+    if (paymentRef    !== undefined) update.paymentRef    = paymentRef;
+    if (notes         !== undefined) update.notes         = notes;
+
+    // Admin clicks "Confirm Payment" — verifies paymentRef is non-empty then marks as paid
+    if (confirmPayment === true) {
+      const current = await Order.findById(req.params.id).lean();
+      if (!current) return res.status(404).json({ error: "Order not found" });
+
+      if (!String(current.paymentRef || "").trim()) {
+        return res.status(400).json({ error: "Cannot confirm: buyer has not provided a payment reference for this order." });
+      }
+      update.status             = "paid";
+      update.paymentConfirmed   = true;
+      update.paymentConfirmedAt = new Date();
+    }
 
     const doc = await Order.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
     if (!doc) return res.status(404).json({ error: "Order not found" });
