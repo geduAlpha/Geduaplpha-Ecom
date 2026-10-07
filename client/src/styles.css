@@ -2176,9 +2176,135 @@ html.dark .safe-trading-card {
 .telebirr-pay-info {
   background: var(--bg-input);
   border-radius: var(--radius-lg);
-  padding: 1rem;
+  padding: 1.25rem;
   margin: 1.25rem 0;
   text-align: left;
+  border: 1px solid var(--border-card);
+}
+
+.copy-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px dashed var(--accent);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  margin: 0.75rem 0;
+}
+
+.copy-text {
+  font-family: monospace;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+.btn-copy {
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-copy:hover {
+  background: var(--accent-dark);
+}
+
+.btn-copy-sm {
+  background: var(--bg-input);
+  border: 1px solid var(--border-card);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.btn-copy-sm:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pay-method-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: var(--accent-light);
+  color: var(--accent-dark);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-sm);
+}
+
+.gateway-details-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  margin-top: 0.75rem;
+}
+
+.gateway-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.gateway-live-tag {
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-full);
+}
+
+.gateway-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-card);
+}
+
+.gateway-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: block;
+}
+
+.gateway-val {
+  font-family: monospace;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.gateway-sublabel {
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.chapa-card {
+  border-color: rgba(5, 150, 105, 0.4);
+  background: #f0fdf4;
+}
+
+html.dark .chapa-card {
+  background: rgba(5, 150, 105, 0.1);
 }
 
 .delivery-guarantee-badge {

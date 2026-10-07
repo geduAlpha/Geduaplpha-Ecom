@@ -22,4 +22,7 @@ export const api = {
   locations: (signal) => request("/locations", { signal }),
   categories: (signal) => request("/categories", { signal }),
   createOrder: (body) => request("/orders", { method: "POST", body: JSON.stringify(body) }),
+  paymentConfig: (signal) => request("/payments/config", { signal }),
+  initializeChapa: (body) => request("/payments/chapa/initialize", { method: "POST", body: JSON.stringify(body) }),
+  verifyChapa: (tx_ref) => request(`/payments/chapa/verify/${tx_ref}`),
 };

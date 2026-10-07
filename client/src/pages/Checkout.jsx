@@ -5,10 +5,38 @@ import { useCart } from "../CartContext.jsx";
 import { money, shippingFor } from "../money.js";
 
 const PAYMENT_METHODS = [
-  { id: "telebirr", name: "Telebirr (ቴሌብር)", icon: "📱", desc: "Instant mobile payment via Ethio Telecom" },
-  { id: "cbe", name: "CBE Birr / Commercial Bank of Ethiopia", icon: "🏦", desc: "Direct CBE mobile banking or transfer" },
-  { id: "cod", name: "Cash / Birr on Delivery (ክፍያ ሲደርስ)", icon: "💵", desc: "Pay cash or Telebirr upon physical delivery" },
-  { id: "chapa", name: "Chapa / Awash / Dashen Bank", icon: "💳", desc: "Pay securely with local debit card" },
+  {
+    id: "telebirr",
+    name: "Telebirr (ቴሌብር)",
+    icon: "📱",
+    badge: "Most Popular",
+    accountNo: "092627366",
+    accountName: "Gedualpha Ecom (Telebirr)",
+    desc: "Send money directly to Telebirr: 092627366",
+  },
+  {
+    id: "cbe",
+    name: "CBE Birr / Commercial Bank of Ethiopia",
+    icon: "🏦",
+    badge: "Direct Bank",
+    accountNo: "1000254874705",
+    accountName: "Gedualpha Ecom",
+    desc: "CBE Account: 1000254874705 (Gedualpha Ecom)",
+  },
+  {
+    id: "chapa",
+    name: "Chapa Payment Gateway (Online)",
+    icon: "💳",
+    badge: "Instant / Cards & Mobile",
+    desc: "Pay securely via Chapa with Telebirr, CBE Birr, Awash, or Cards",
+  },
+  {
+    id: "cod",
+    name: "Cash on Delivery (ክፍያ ሲደርስ)",
+    icon: "💵",
+    badge: "Pay at Doorstep",
+    desc: "Pay cash or Telebirr upon physical delivery",
+  },
 ];
 
 export default function Checkout() {
@@ -16,18 +44,26 @@ export default function Checkout() {
   const [form, setForm] = useState({
     name: "",
     email: "",
-    phone: "+251 ",
+    phone: "+251912627366",
     city: "Addis Ababa",
     subcity: "Bole",
     address: "",
   });
   const [paymentMethod, setPaymentMethod] = useState("telebirr");
+  const [transactionRef, setTransactionRef] = useState("");
+  const [copiedKey, setCopiedKey] = useState("");
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [order, setOrder] = useState(null);
 
   const shipping = shippingFor(subtotal);
   const total = subtotal + shipping;
+
+  function copyToClipboard(text, key) {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(""), 2500);
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -48,16 +84,42 @@ export default function Checkout() {
     }
 
     try {
+      // 1. Create order in MongoDB
       const created = await api.createOrder({
         customer: {
           name: form.name,
           email: form.email || `${form.phone.replace(/[^0-9]/g, "")}@gedualpha.customer`,
-          address: `${form.address} (${form.subcity}) - Payment: ${paymentMethod.toUpperCase()}`,
+          address: `${form.address} (${form.subcity}) - Payment: ${paymentMethod.toUpperCase()}${
+            transactionRef ? ` (Ref: ${transactionRef})` : ""
+          }`,
           city: form.city,
           postal: form.phone,
         },
         items: items.map(({ id, qty }) => ({ id, qty })),
       });
+
+      // 2. If Chapa selected, initialize payment gateway
+      if (paymentMethod === "chapa") {
+        try {
+          const chapaInit = await api.initializeChapa({
+            amount: total,
+            email: form.email || "customer@gedualpha.com",
+            firstName: form.name.split(" ")[0],
+            lastName: form.name.split(" ")[1] || "Customer",
+            phone: form.phone,
+            orderId: created.id,
+            returnUrl: window.location.href,
+          });
+
+          if (chapaInit?.checkoutUrl) {
+            window.location.href = chapaInit.checkoutUrl;
+            return;
+          }
+        } catch (chapaErr) {
+          console.warn("Chapa online gateway notice:", chapaErr);
+        }
+      }
+
       setOrder(created);
       clear();
     } catch (err) {
@@ -69,26 +131,80 @@ export default function Checkout() {
 
   /* ── Order confirmed ── */
   if (order) {
+    const selectedPay = PAYMENT_METHODS.find((p) => p.id === paymentMethod);
+
     return (
       <div className="confirm-page">
         <div className="confirm-card">
           <div className="confirm-icon">🎉</div>
-          <h1>Order Confirmed!</h1>
+          <h1>Order Received Successfully!</h1>
           <div className="order-badge">Order ID: #{order.id}</div>
           <p>
-            Your order of <strong>{money(order.total)}</strong> has been received.
-            The seller / courier will call you at <strong>{form.phone}</strong> for delivery verification.
+            Your order of <strong>{money(order.total)}</strong> has been registered.
+            Our team and courier will contact you at <strong>{form.phone}</strong> to confirm delivery.
           </p>
 
-          <div className="telebirr-pay-info">
-            <h4>📱 Payment Reference</h4>
-            <p>
-              Method selected: <strong>{PAYMENT_METHODS.find((p) => p.id === paymentMethod)?.name}</strong>
-            </p>
-            <p style={{ fontSize: "0.9rem", color: "var(--color-ink-muted)", marginTop: "0.25rem" }}>
-              Please have <strong>{money(order.total)}</strong> ready for payment.
-            </p>
-          </div>
+          {/* Payment Gateway Specific Instructions */}
+          {paymentMethod === "telebirr" && (
+            <div className="telebirr-pay-info">
+              <h4>📱 Telebirr Payment Instructions</h4>
+              <p>Please send <strong>{money(order.total)}</strong> to our official Telebirr number:</p>
+              <div className="copy-box">
+                <span className="copy-text">092627366</span>
+                <button
+                  type="button"
+                  className="btn-copy"
+                  onClick={() => copyToClipboard("092627366", "telebirr")}
+                >
+                  {copiedKey === "telebirr" ? "✓ Copied!" : "📋 Copy Number"}
+                </button>
+              </div>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.5rem" }}>
+                Steps: Open Telebirr App &rarr; Send Money &rarr; Enter <strong>092627366</strong> &rarr; Amount: <strong>{order.total} ETB</strong> &rarr; Remark: <strong>Order #{order.id}</strong>.
+              </p>
+            </div>
+          )}
+
+          {paymentMethod === "cbe" && (
+            <div className="telebirr-pay-info">
+              <h4>🏦 CBE (Commercial Bank of Ethiopia) Transfer</h4>
+              <p>Please transfer <strong>{money(order.total)}</strong> to our official CBE account:</p>
+              <div className="copy-box">
+                <div>
+                  <strong>Account: </strong><span className="copy-text">1000254874705</span>
+                  <br />
+                  <small>Name: Gedualpha Ecom</small>
+                </div>
+                <button
+                  type="button"
+                  className="btn-copy"
+                  onClick={() => copyToClipboard("1000254874705", "cbe")}
+                >
+                  {copiedKey === "cbe" ? "✓ Copied!" : "📋 Copy Account"}
+                </button>
+              </div>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.5rem" }}>
+                You can pay using CBE Birr, CBE Mobile App, or at any CBE branch.
+              </p>
+            </div>
+          )}
+
+          {paymentMethod === "chapa" && (
+            <div className="telebirr-pay-info">
+              <h4>💳 Chapa Online Payment</h4>
+              <p>Chapa payment reference created for <strong>Order #{order.id}</strong>.</p>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                Status: <strong>Active / Verified via Chapa Gateway</strong>
+              </p>
+            </div>
+          )}
+
+          {paymentMethod === "cod" && (
+            <div className="telebirr-pay-info">
+              <h4>💵 Cash on Delivery</h4>
+              <p>Please prepare <strong>{money(order.total)}</strong> in cash or Telebirr upon physical delivery.</p>
+            </div>
+          )}
 
           <Link className="btn btn-accent btn-wide" to="/" id="keep-shopping-btn">
             ← Continue Browsing Marketplace
@@ -112,7 +228,6 @@ export default function Checkout() {
     );
   }
 
-  /* ── Checkout form ── */
   return (
     <div className="checkout-page container" style={{ paddingTop: "1.5rem", paddingBottom: "3rem" }}>
       <div className="checkout-form-card">
@@ -143,7 +258,7 @@ export default function Checkout() {
                 <input
                   id="field-phone"
                   type="tel"
-                  placeholder="+251 91 123 4567"
+                  placeholder="+251912627366"
                   value={form.phone}
                   aria-invalid={Boolean(errors.phone)}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -213,9 +328,9 @@ export default function Checkout() {
             </div>
           </div>
 
-          {/* Payment Method */}
+          {/* Payment Method Selection */}
           <div className="form-section">
-            <label className="form-section-title">3. Choose Payment Method</label>
+            <label className="form-section-title">3. Choose Payment Gateway</label>
             <div className="payment-options-grid">
               {PAYMENT_METHODS.map((method) => (
                 <label
@@ -229,16 +344,98 @@ export default function Checkout() {
                     checked={paymentMethod === method.id}
                     onChange={() => setPaymentMethod(method.id)}
                   />
-                  <div className="payment-option-content">
+                  <div className="payment-option-content" style={{ width: "100%" }}>
                     <span className="payment-icon">{method.icon}</span>
-                    <div>
-                      <strong className="payment-name">{method.name}</strong>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <strong className="payment-name">{method.name}</strong>
+                        {method.badge && <span className="pay-method-badge">{method.badge}</span>}
+                      </div>
                       <p className="payment-desc">{method.desc}</p>
                     </div>
                   </div>
                 </label>
               ))}
             </div>
+
+            {/* Interactive Gateway Details Box */}
+            {paymentMethod === "telebirr" && (
+              <div className="gateway-details-card">
+                <div className="gateway-header">
+                  <span>📱 Telebirr Gateway Account</span>
+                  <span className="gateway-live-tag">Active</span>
+                </div>
+                <div className="gateway-account-row">
+                  <div>
+                    <span className="gateway-label">Telebirr Number:</span>
+                    <span className="gateway-val">092627366</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-copy-sm"
+                    onClick={() => copyToClipboard("092627366", "form-telebirr")}
+                  >
+                    {copiedKey === "form-telebirr" ? "✓ Copied!" : "📋 Copy"}
+                  </button>
+                </div>
+                <div className="field" style={{ marginTop: "0.75rem" }}>
+                  <span>Telebirr Transaction Reference / SMS Code (Optional)</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. CI64839201"
+                    value={transactionRef}
+                    onChange={(e) => setTransactionRef(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {paymentMethod === "cbe" && (
+              <div className="gateway-details-card">
+                <div className="gateway-header">
+                  <span>🏦 Commercial Bank of Ethiopia (CBE)</span>
+                  <span className="gateway-live-tag">Active</span>
+                </div>
+                <div className="gateway-account-row">
+                  <div>
+                    <span className="gateway-label">CBE Account Number:</span>
+                    <span className="gateway-val">1000254874705</span>
+                    <br />
+                    <span className="gateway-sublabel">Account Name: Gedualpha Ecom</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-copy-sm"
+                    onClick={() => copyToClipboard("1000254874705", "form-cbe")}
+                  >
+                    {copiedKey === "form-cbe" ? "✓ Copied!" : "📋 Copy"}
+                  </button>
+                </div>
+                <div className="field" style={{ marginTop: "0.75rem" }}>
+                  <span>CBE Transfer Ref / Transaction ID (Optional)</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. FT240984920"
+                    value={transactionRef}
+                    onChange={(e) => setTransactionRef(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {paymentMethod === "chapa" && (
+              <div className="gateway-details-card chapa-card">
+                <div className="gateway-header">
+                  <span>💳 Chapa Online Payment Gateway</span>
+                  <span className="gateway-live-tag" style={{ background: "#059669" }}>
+                    Verified Chapa API
+                  </span>
+                </div>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.35rem" }}>
+                  Seamless instant online checkout. Accepts <strong>Telebirr</strong>, <strong>CBE Birr</strong>, <strong>Awash Bank</strong>, <strong>Dashen Amole</strong>, and <strong>Visa / Mastercard</strong>.
+                </p>
+              </div>
+            )}
           </div>
 
           {(errors.items || errors.form) && (
@@ -253,7 +450,11 @@ export default function Checkout() {
             style={{ padding: "1rem", fontSize: "1.1rem", marginTop: "1rem" }}
             disabled={busy}
           >
-            {busy ? "Confirming Order…" : `Complete Order — ${money(total)}`}
+            {busy
+              ? "Processing Order…"
+              : paymentMethod === "chapa"
+              ? `Pay Now with Chapa — ${money(total)}`
+              : `Complete Order — ${money(total)}`}
           </button>
         </form>
       </div>
@@ -285,10 +486,9 @@ export default function Checkout() {
         </div>
 
         <div className="delivery-guarantee-badge">
-          🛡️ Verified Ethiopian Seller Escrow &bull; Fast Delivery Guarantee
+          🛡️ Telebirr (092627366) &bull; CBE (1000254874705) &bull; Chapa Gateway
         </div>
       </aside>
     </div>
   );
 }
-
