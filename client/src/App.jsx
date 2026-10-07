@@ -6,6 +6,7 @@ import Footer from "./components/Footer.jsx";
 import Home from "./pages/Home.jsx";
 import Product from "./pages/Product.jsx";
 import Checkout from "./pages/Checkout.jsx";
+import Sell from "./pages/Sell.jsx";
 
 function NotFound() {
   return (
@@ -13,7 +14,7 @@ function NotFound() {
       <div style={{ fontSize: "3rem" }}>🔍</div>
       <h1>Page not found</h1>
       <p>The link may be old or mistyped.</p>
-      <a className="btn btn-accent mt-4" href="/">Back to the shop</a>
+      <a className="btn btn-accent mt-4" href="/">Back to the marketplace</a>
     </div>
   );
 }
@@ -27,12 +28,13 @@ export default function App() {
 
   return (
     <>
-      <div className="announce">🚚 Free shipping on orders over $60 — Shop now</div>
+      <div className="announce">🇪🇹 Addis Ababa &amp; Ethiopia’s Trusted Marketplace — Post Ads for Free &bull; Pay with Telebirr &amp; CBE Birr</div>
       <Header />
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/product/:id" element={<Product />} />
+          <Route path="/sell" element={<Sell />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

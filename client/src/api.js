@@ -11,7 +11,15 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  products: (params, signal) => request(`/products?${new URLSearchParams(params)}`, { signal }),
+  products: (params, signal) => {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params || {}).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+    );
+    return request(`/products?${new URLSearchParams(cleanParams)}`, { signal });
+  },
   product: (id, signal) => request(`/products/${id}`, { signal }),
+  createProduct: (body) => request("/products", { method: "POST", body: JSON.stringify(body) }),
+  locations: (signal) => request("/locations", { signal }),
+  categories: (signal) => request("/categories", { signal }),
   createOrder: (body) => request("/orders", { method: "POST", body: JSON.stringify(body) }),
 };

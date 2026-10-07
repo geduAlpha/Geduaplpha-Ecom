@@ -18,11 +18,34 @@ const CLIENT_DIST = path.join(__dirname, "../client/dist");
 
 const app = express();
 const PORT = parseInt(process.env.PORT, 10) || 4000;
-const FREE_SHIPPING_OVER = 6000; // cents
-const FLAT_SHIPPING = 599;       // cents
+const FREE_SHIPPING_OVER = 5000; // 5,000 ETB
+const FLAT_SHIPPING = 250;       // 250 ETB
+
+const CITIES = [
+  { city: "Addis Ababa", subcities: ["Bole", "Kazanchis", "Piassa", "CMC", "Megenagna", "Sarbet", "Mexico", "Lebu", "Ayat", "Saris", "Gurd Shola"] },
+  { city: "Adama", subcities: ["Center", "Bole", "Posta", "Kebele 04"] },
+  { city: "Hawassa", subcities: ["Piazza", "Tabor", "Menhariya", "Haile Resort Area"] },
+  { city: "Bahir Dar", subcities: ["Belay Zeleke", "Kebele 13", "Tana Subcity", "Gish Abay"] },
+  { city: "Dire Dawa", subcities: ["Kezira", "Megala", "Sabian", "Gende Kore"] },
+  { city: "Mekelle", subcities: ["Hawelti", "Kedamay Weyane", "Hadnet", "Ayder"] },
+  { city: "Gondar", subcities: ["Arada", "Maraki", "Azezo", "Fasil"] },
+  { city: "Jimma", subcities: ["Hirmata", "Mendera", "Jiren", "Bole"] },
+  { city: "Bishoftu", subcities: ["Center", "Kuriftu", "Babogaya", "Hora"] },
+];
+
+const CATEGORIES = [
+  { id: "all", name: "All Categories", icon: "🏪", count: 0 },
+  { id: "electronics", name: "Electronics & Phones", icon: "📱", count: 0 },
+  { id: "vehicles", name: "Vehicles & Auto", icon: "🚗", count: 0 },
+  { id: "property", name: "Real Estate / Homes", icon: "🏠", count: 0 },
+  { id: "fashion", name: "Fashion & Beauty", icon: "👗", count: 0 },
+  { id: "furniture", name: "Home & Furniture", icon: "🛋️", count: 0 },
+  { id: "stationery", name: "Desk & Stationery", icon: "📚", count: 0 },
+  { id: "services", name: "Services & Jobs", icon: "💼", count: 0 },
+];
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || "*" }));
-app.use(express.json({ limit: "50kb" }));
+app.use(express.json({ limit: "200kb" }));
 
 // Serve built React frontend
 app.use(express.static(CLIENT_DIST));
@@ -33,13 +56,49 @@ app.get("/api/health", (_req, res) => {
   res.status(200).json({
     status: "ok",
     db: ready ? "connected" : "connecting",
+    platform: "Gedualpha Ecom Marketplace (Engocha Flow)",
+    currency: "ETB",
   });
 });
 
-// ─── Catalogue ────────────────────────────────────────────────────────────────
+// ─── Locations & Categories ────────────────────────────────────────────────────
+app.get("/api/locations", (_req, res) => {
+  res.json({ cities: CITIES });
+});
+
+app.get("/api/categories", async (_req, res) => {
+  try {
+    const counts = await Product.aggregate([
+      { $group: { _id: "$category", count: { $sum: 1 } } }
+    ]);
+    const countMap = Object.fromEntries(counts.map(c => [c._id, c.count]));
+    const total = Object.values(countMap).reduce((a, b) => a + b, 0);
+
+    const result = CATEGORIES.map(cat => ({
+      ...cat,
+      count: cat.id === "all" ? total : (countMap[cat.id] || 0)
+    }));
+    res.json({ categories: result });
+  } catch (_err) {
+    res.json({ categories: CATEGORIES });
+  }
+});
+
+// ─── Marketplace Catalogue ───────────────────────────────────────────────────
 app.get("/api/products", async (req, res) => {
   try {
-    const { q = "", category = "all", sort = "featured", page = "1", limit = "12" } = req.query;
+    const {
+      q = "",
+      category = "all",
+      city = "",
+      condition = "",
+      minPrice = "",
+      maxPrice = "",
+      sort = "featured",
+      page = "1",
+      limit = "12"
+    } = req.query;
+
     const needle  = String(q).trim();
     const size    = Math.min(48, Math.max(1, parseInt(limit, 10) || 12));
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
@@ -47,21 +106,39 @@ app.get("/api/products", async (req, res) => {
 
     // Build filter
     const filter = {};
-    if (category !== "all") filter.category = category;
+    if (category && category !== "all") filter.category = category;
+    if (city && city !== "all" && city !== "All Ethiopia") {
+      filter["location.city"] = new RegExp(`^${city}$`, "i");
+    }
+    if (condition && condition !== "all") {
+      filter.condition = condition;
+    }
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice && !isNaN(minPrice)) filter.price.$gte = Number(minPrice);
+      if (maxPrice && !isNaN(maxPrice)) filter.price.$lte = Number(maxPrice);
+    }
+
     if (needle) {
-      // Escape regex special chars before building the pattern
       const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const rx = new RegExp(escaped, "i");
-      filter.$or = [{ name: rx }, { description: rx }];
+      filter.$or = [
+        { name: rx },
+        { description: rx },
+        { "location.subcity": rx },
+        { "location.city": rx }
+      ];
     }
 
     const sortMap = {
       "price-asc":  { price:  1 },
       "price-desc": { price: -1 },
       "name":       { name:   1 },
-      "featured":   { createdAt: -1 },
+      "views":      { views: -1, createdAt: -1 },
+      "newest":     { createdAt: -1 },
+      "featured":   { featured: -1, createdAt: -1 },
     };
-    const sortBy = sortMap[sort] || { createdAt: -1 };
+    const sortBy = sortMap[sort] || { featured: -1, createdAt: -1 };
 
     const [total, docs] = await Promise.all([
       Product.countDocuments(filter),
@@ -77,19 +154,98 @@ app.get("/api/products", async (req, res) => {
       items,
     });
   } catch (err) {
-    console.error(err);
+    console.error("Products error:", err);
     res.status(500).json({ error: "DB Error: " + err.message });
   }
 });
 
+// ─── Product Detail & View Counter ───────────────────────────────────────────
 app.get("/api/products/:id", async (req, res) => {
   try {
-    const doc = await Product.findById(req.params.id).lean();
+    const doc = await Product.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true }
+    ).lean();
     if (!doc) return res.status(404).json({ error: "Product not found" });
     const { _id, __v, ...rest } = doc;
     res.json({ id: _id, ...rest });
   } catch (err) {
     res.status(500).json({ error: "DB Error: " + err.message });
+  }
+});
+
+// ─── Post / Sell a Listing ────────────────────────────────────────────────────
+app.post("/api/products", async (req, res) => {
+  try {
+    const {
+      name,
+      category,
+      price,
+      negotiable = false,
+      condition = "Brand New",
+      description,
+      stock = 1,
+      art = "notebook",
+      color = "#2563EB",
+      tint = "#EFF6FF",
+      location = {},
+      seller = {}
+    } = req.body;
+
+    const errors = {};
+    if (!String(name || "").trim()) errors.name = "Item title is required";
+    if (!String(category || "").trim()) errors.category = "Category is required";
+    if (price === undefined || price === null || isNaN(price) || Number(price) <= 0) {
+      errors.price = "Enter a valid price in ETB";
+    }
+    if (!String(description || "").trim()) errors.description = "Description is required";
+    if (!String(seller.phone || "").trim()) errors.phone = "Seller phone number is required";
+
+    if (Object.keys(errors).length) {
+      return res.status(400).json({ errors });
+    }
+
+    const slugBase = String(name)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 30);
+    const uniqueSuffix = crypto.randomUUID().slice(0, 6);
+    const listingId = `${slugBase}-${uniqueSuffix}`;
+
+    const newProduct = await Product.create({
+      _id: listingId,
+      name: String(name).trim(),
+      category: String(category).trim(),
+      price: Number(price),
+      negotiable: Boolean(negotiable),
+      condition: String(condition).trim(),
+      stock: Math.max(1, parseInt(stock, 10) || 1),
+      art: String(art || "notebook"),
+      color: String(color || "#2563EB"),
+      tint: String(tint || "#EFF6FF"),
+      description: String(description).trim(),
+      location: {
+        city: String(location.city || "Addis Ababa").trim(),
+        subcity: String(location.subcity || "Bole").trim(),
+      },
+      seller: {
+        name: String(seller.name || "Gedualpha Seller").trim(),
+        phone: String(seller.phone || "").trim(),
+        telegram: String(seller.telegram || "").replace(/^@/, "").trim(),
+        whatsapp: String(seller.whatsapp || "").trim(),
+        verified: true,
+      },
+      views: 1,
+      featured: false,
+    });
+
+    const { _id, __v, ...rest } = newProduct.toObject();
+    res.status(201).json({ id: _id, ...rest });
+  } catch (err) {
+    console.error("Create listing error:", err);
+    res.status(500).json({ error: "Failed to create listing: " + err.message });
   }
 });
 

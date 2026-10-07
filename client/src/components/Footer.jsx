@@ -17,9 +17,24 @@ function PlayIcon() {
 }
 
 const FOOTER_LINKS = {
-  Services: ["Sell on Gedualpha", "Sales Advisor", "Supplier Connect"],
-  Company:  ["About Us", "Our Services", "Contact Us"],
-  Support:  ["Privacy Policy", "Terms of Service", "Customer Support"],
+  Marketplace: [
+    { label: "+ Post Free Listing", to: "/sell" },
+    { label: "Electronics & Phones", to: "/?category=electronics" },
+    { label: "Vehicles & Auto", to: "/?category=vehicles" },
+    { label: "Real Estate & Homes", to: "/?category=property" },
+  ],
+  Locations: [
+    { label: "Addis Ababa Listings", to: "/?city=Addis+Ababa" },
+    { label: "Hawassa Listings", to: "/?city=Hawassa" },
+    { label: "Adama Listings", to: "/?city=Adama" },
+    { label: "Bahir Dar Listings", to: "/?city=Bahir+Dar" },
+  ],
+  Trust: [
+    { label: "Safe Buying Guidelines", to: "#" },
+    { label: "Telebirr & CBE Payment", to: "#" },
+    { label: "Diamond Boost Ads", to: "#" },
+    { label: "Customer Support (24/7)", to: "#" },
+  ],
 };
 
 export default function Footer() {
@@ -36,19 +51,29 @@ export default function Footer() {
               Gedualpha<span>Ecom</span>
             </div>
             <p className="footer-tagline">
-              A simple, fun and easy-to-use marketplace for quality desk supplies, stationery, and lifestyle goods.
+              Ethiopia’s fastest growing online marketplace. Connect with buyers and sellers across Addis Ababa, Adama, Hawassa, and nationwide with zero listing fees.
             </p>
+            <div className="footer-payment-badges">
+              <span className="pay-pill">📱 Telebirr</span>
+              <span className="pay-pill">🏦 CBE Birr</span>
+              <span className="pay-pill">💳 Chapa</span>
+              <span className="pay-pill">💵 Cash on Delivery</span>
+            </div>
           </div>
 
           {/* Links */}
           <div className="footer-links">
-            {Object.entries(FOOTER_LINKS).map(([heading, links]) => (
+            {Object.entries(FOOTER_LINKS).map(([heading, items]) => (
               <div className="footer-col" key={heading}>
                 <h4>{heading}</h4>
                 <ul>
-                  {links.map((link) => (
-                    <li key={link}>
-                      <a href="#">{link}</a>
+                  {items.map((item) => (
+                    <li key={item.label}>
+                      {item.to.startsWith("/") ? (
+                        <Link to={item.to}>{item.label}</Link>
+                      ) : (
+                        <a href={item.to}>{item.label}</a>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -59,11 +84,10 @@ export default function Footer() {
 
         {/* Bottom row */}
         <div className="footer-bottom">
-          <p>© {year} Gedualpha Technologies. All rights reserved.</p>
+          <p>© {year} Gedualpha Ecom &bull; Inspired by Engocha logic &amp; workflows for Ethiopian commerce.</p>
 
-          {/* App download banner */}
           <div className="app-banner" id="app-download-banner">
-            <p>📱 Download the Gedualpha Ecom app</p>
+            <p>📱 Gedualpha Ecom Mobile App</p>
             <div className="app-badges">
               <a href="#" className="app-badge" id="app-store-btn" aria-label="Download on App Store">
                 <AppleIcon />
