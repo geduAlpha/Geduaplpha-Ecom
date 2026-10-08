@@ -37,7 +37,7 @@ export default function Checkout() {
   const [form, setForm] = useState({
     name:    user?.name  || "",
     email:   user?.email || "",
-    phone:   user?.phone || "+251912627366",
+    phone:   user?.phone || "",
     city:    "Addis Ababa",
     subcity: "Bole",
     address: "",
@@ -272,7 +272,7 @@ export default function Checkout() {
                 <label key={gw.id} className={`co-gw-card ${paymentMethod === gw.id ? "active" : ""}`}>
                   <input type="radio" name="payment" value={gw.id}
                     checked={paymentMethod === gw.id}
-                    onChange={() => { setPaymentMethod(gw.id); setTransactionRef(""); setErrors({}); }} />
+                    onChange={() => { setPaymentMethod(gw.id); setTransactionRef(""); setErrors((prev) => ({ name: prev.name, phone: prev.phone, address: prev.address })); }} />
                   <span className="co-gw-icon">{gw.icon}</span>
                   <div className="co-gw-info">
                     <strong>{gw.name}</strong>

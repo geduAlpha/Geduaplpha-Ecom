@@ -187,9 +187,7 @@ export default function Header() {
                         {user.role !== "buyer" && (
                           <Link to="/sell" className="hum-item" onClick={() => setUserMenuOpen(false)}>🏪 My Listings</Link>
                         )}
-                        {user.role === "buyer" && (
-                          <Link to="/my-orders" className="hum-item" onClick={() => setUserMenuOpen(false)}>📦 My Orders</Link>
-                        )}
+                        <Link to="/my-orders" className="hum-item" onClick={() => setUserMenuOpen(false)}>📦 My Orders</Link>
                         <button className="hum-item hum-item-danger" onClick={handleUserLogout}><LogoutIcon /> Sign Out</button>
                       </div>
                     </div>

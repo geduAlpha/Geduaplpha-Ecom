@@ -38,9 +38,16 @@ export const api = {
   authMe:       (token) => request("/auth/me", { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }),
   createOrder: (body) => request("/orders", { method: "POST", body: JSON.stringify(body) }),
   getOrder:    (id)   => request(`/orders/${id}`),
-  getMyOrders: (userId, token) => request(`/orders/by-user/${userId}`, {
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-  }),
+  getMyOrders: (userId, token, signal) => {
+    return fetch(`/api/orders/by-user/${userId}`, {
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      signal,
+    }).then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw Object.assign(new Error(data.error || `Server error (HTTP ${res.status})`), { status: res.status });
+      return data;
+    });
+  },
   paymentConfig: (signal) => request("/payments/config", { signal }),
   initializeChapa: (body) => request("/payments/chapa/initialize", { method: "POST", body: JSON.stringify(body) }),
   verifyChapa: (tx_ref) => request(`/payments/chapa/verify/${tx_ref}`),

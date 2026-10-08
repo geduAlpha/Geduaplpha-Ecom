@@ -55,11 +55,12 @@ export default function MyOrders() {
   const [openId,  setOpenId]  = useState(null); // expanded order id
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     const ac = new AbortController();
-    api.getMyOrders(user.id, token)
+    setLoading(true);
+    api.getMyOrders(user.id, token, ac.signal)
       .then((d) => { setOrders(d.orders || []); setLoading(false); })
-      .catch((e) => { setError(e.message); setLoading(false); });
+      .catch((e) => { if (e.name !== "AbortError") { setError(e.message); setLoading(false); } });
     return () => ac.abort();
   }, [user, token]);
 

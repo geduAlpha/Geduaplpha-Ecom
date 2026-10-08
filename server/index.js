@@ -616,18 +616,8 @@ async function rollback(deducted) {
   );
 }
 
-app.get("/api/orders/:id", async (req, res) => {
-  try {
-    const doc = await Order.findById(req.params.id).lean();
-    if (!doc) return res.status(404).json({ error: "Order not found" });
-    const { _id, __v, ...rest } = doc;
-    res.json({ id: _id, ...rest });
-  } catch (err) {
-    res.status(500).json({ error: "DB Error: " + err.message });
-  }
-});
-
 // GET /api/orders/by-user/:userId — fetch all orders for a logged-in buyer
+// MUST be defined BEFORE /api/orders/:id or Express will match "by-user" as an :id
 app.get("/api/orders/by-user/:userId", requireDB, async (req, res) => {
   try {
     const docs = await Order.find({ userId: req.params.userId })
@@ -635,6 +625,17 @@ app.get("/api/orders/by-user/:userId", requireDB, async (req, res) => {
       .lean();
     const items = docs.map(({ _id, __v, ...rest }) => ({ id: _id, ...rest }));
     res.json({ orders: items });
+  } catch (err) {
+    res.status(500).json({ error: "DB Error: " + err.message });
+  }
+});
+
+app.get("/api/orders/:id", async (req, res) => {
+  try {
+    const doc = await Order.findById(req.params.id).lean();
+    if (!doc) return res.status(404).json({ error: "Order not found" });
+    const { _id, __v, ...rest } = doc;
+    res.json({ id: _id, ...rest });
   } catch (err) {
     res.status(500).json({ error: "DB Error: " + err.message });
   }
