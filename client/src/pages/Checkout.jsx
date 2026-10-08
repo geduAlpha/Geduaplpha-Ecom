@@ -30,7 +30,7 @@ const STATUS_META = {
 };
 
 export default function Checkout() {
-  const { items, subtotal, clear } = useCart();
+  const { items, subtotal, clear, setQty, remove } = useCart();
   const { user }                   = useUser();
   const navigate                   = useNavigate();
 
@@ -48,6 +48,7 @@ export default function Checkout() {
   const [errors,         setErrors]         = useState({});
   const [busy,           setBusy]           = useState(false);
   const [order,          setOrder]          = useState(null);
+  const [stockWarnings,  setStockWarnings]  = useState([]); // [{ id, name, available, requested }]
 
   const shipping = shippingFor(subtotal);
   const total    = subtotal + shipping;
@@ -64,6 +65,7 @@ export default function Checkout() {
     e.preventDefault();
     setBusy(true);
     setErrors({});
+    setStockWarnings([]);
 
     const errs = {};
     if (!form.name.trim())    errs.name    = "Full name is required";
@@ -110,10 +112,40 @@ export default function Checkout() {
       setOrder(created);
       clear();
     } catch (err) {
-      setErrors(err.errors ?? { form: err.message || "Something went wrong." });
+      const errMsg = err.errors?.items || err.message || "Something went wrong.";
+
+      // ── Detect stock shortage: "Only X left of "Product Name"" ──────
+      const stockMatch = String(errMsg).match(/^Only (\d+) left of "(.*)"$/);
+      if (stockMatch) {
+        const available = parseInt(stockMatch[1], 10);
+        const prodName  = stockMatch[2];
+        // Find which cart item triggered this
+        const affected  = items.find((i) => i.name === prodName || prodName.includes(i.name));
+        if (affected) {
+          setStockWarnings([{
+            id:        affected.id,
+            name:      prodName,
+            available,
+            requested: affected.qty,
+          }]);
+          setErrors({});   // clear generic errors — warning banner takes over
+          setBusy(false);
+          return;
+        }
+      }
+
+      setErrors(err.errors ?? { form: errMsg });
     } finally {
       setBusy(false);
     }
+  }
+
+  /* Fix cart: reduce qty of all stock-warned items to available stock */
+  function fixCart() {
+    stockWarnings.forEach(({ id, available }) => {
+      setQty(id, available);
+    });
+    setStockWarnings([]);
   }
 
   /* ── Order confirmed screen ──────────────────────────────────────── */
@@ -329,10 +361,51 @@ export default function Checkout() {
             <p className="error" style={{ marginBottom: "1rem" }}>⚠️ {errors.items || errors.form}</p>
           )}
 
+          {/* ── Stock shortage warning ── */}
+          {stockWarnings.length > 0 && (
+            <div className="co-stock-warn">
+              <div className="co-stock-warn-icon">⚠️</div>
+              <div className="co-stock-warn-body">
+                <div className="co-stock-warn-title">Not enough stock to complete your order</div>
+                {stockWarnings.map((w) => (
+                  <div key={w.id} className="co-stock-warn-item">
+                    <span className="co-stock-warn-name">{w.name}</span>
+                    <span className="co-stock-warn-detail">
+                      You ordered <strong>{w.requested}</strong> but only{" "}
+                      <strong style={{ color: w.available === 0 ? "#dc2626" : "#d97706" }}>
+                        {w.available === 0 ? "none" : w.available}
+                      </strong>{" "}
+                      {w.available === 0 ? "remain in stock" : w.available === 1 ? "is left" : "are left"}
+                    </span>
+                  </div>
+                ))}
+                {stockWarnings.some((w) => w.available === 0) ? (
+                  <div className="co-stock-warn-actions">
+                    <button type="button" className="co-stock-remove-btn"
+                      onClick={() => { stockWarnings.forEach((w) => { if (w.available === 0) remove(w.id); }); setStockWarnings([]); }}>
+                      Remove Out-of-Stock Items
+                    </button>
+                  </div>
+                ) : (
+                  <div className="co-stock-warn-actions">
+                    <button type="button" className="co-stock-fix-btn" onClick={fixCart}>
+                      Adjust to Available Qty and Retry
+                    </button>
+                    <button type="button" className="co-stock-remove-btn"
+                      onClick={() => { stockWarnings.forEach((w) => remove(w.id)); setStockWarnings([]); }}>
+                      Remove These Items
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <button className="btn btn-accent btn-wide"
             style={{ padding: "1rem", fontSize: "1.1rem", marginTop: "0.5rem" }}
-            disabled={busy}>
+            disabled={busy || stockWarnings.length > 0}>
             {busy ? "Processing…"
+              : stockWarnings.length > 0 ? "Fix cart issues above first"
               : paymentMethod === "chapa" ? `Pay with Chapa — ${money(total)}`
               : `Place Order — ${money(total)}`}
           </button>
@@ -343,9 +416,22 @@ export default function Checkout() {
       <aside className="summary-card" aria-label="Order summary">
         <h2>Order Summary</h2>
         <ul>
-          {items.map((i) => (
-            <li key={i.id}><span>{i.qty} × {i.name}</span><span>{money(i.qty * i.price)}</span></li>
-          ))}
+          {items.map((i) => {
+            const warn = stockWarnings.find((w) => w.id === i.id);
+            return (
+              <li key={i.id} className={warn ? "co-summary-item-warn" : ""}>
+                <span>
+                  {i.qty} × {i.name}
+                  {warn && (
+                    <span className="co-summary-stock-tag">
+                      {warn.available === 0 ? "Out of stock" : `Only ${warn.available} left`}
+                    </span>
+                  )}
+                </span>
+                <span>{money(i.qty * i.price)}</span>
+              </li>
+            );
+          })}
         </ul>
         <div className="summary-divider" />
         <div className="summary-row"><span>Subtotal</span><span>{money(subtotal)}</span></div>
