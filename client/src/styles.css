@@ -8079,3 +8079,29 @@ html.dark .cd-ref-box.pending { background: rgba(234,179,8,0.12); color: #facc15
 
 /* dark mode overrides */
 html.dark .ch-tab.active { box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+
+
+/* ── Single Sign In / Sign Up header button ─────────────────────────────── */
+.hdr-auth-single-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2.5rem;
+  padding: 0 1.125rem;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.hdr-auth-single-btn:hover {
+  background: var(--accent-dark);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
+  transform: translateY(-1px);
+}
+.hdr-auth-single-btn:active { transform: scale(0.97); }

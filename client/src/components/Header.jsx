@@ -194,11 +194,14 @@ export default function Header() {
                   )}
                 </div>
               ) : (
-                /* Login + Sign Up buttons */
-                <div className="hdr-auth-btns">
-                  <button className="hdr-login-pill" onClick={openLogin}>Log In</button>
-                  <button className="hdr-signup-pill" onClick={openSignup}>Sign Up</button>
-                </div>
+                /* Single Sign In / Sign Up button */
+                <button className="hdr-auth-single-btn" onClick={openLogin} title="Sign in or create an account">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
+                    <circle cx="12" cy="8" r="4"/>
+                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                  </svg>
+                  <span>Sign In</span>
+                </button>
               )}
 
               {/* ── Admin button — only visible when no regular user is logged in ── */}
@@ -373,7 +376,7 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
 
         {/* ── TABS ── */}
         <div className="auth-tabs">
-          <button className={`auth-tab ${mode === "login" ? "active" : ""}`} onClick={() => setMode("login")}>Log In</button>
+          <button className={`auth-tab ${mode === "login" ? "active" : ""}`} onClick={() => setMode("login")}>Sign In</button>
           <button className={`auth-tab ${mode === "signup" ? "active" : ""}`} onClick={() => { setMode("signup"); setSignupStep(1); }}>Sign Up</button>
         </div>
 
@@ -452,7 +455,7 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
 
                 <p className="auth-switch">
                   Already have an account?{" "}
-                  <button className="auth-switch-link" onClick={() => setMode("login")}>Log In</button>
+                  <button className="auth-switch-link" onClick={() => setMode("login")}>Sign In</button>
                 </p>
               </>
             )}
@@ -545,7 +548,7 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
 
                 <p className="auth-switch">
                   Already have an account?{" "}
-                  <button className="auth-switch-link" onClick={() => setMode("login")}>Log In</button>
+                  <button className="auth-switch-link" onClick={() => setMode("login")}>Sign In</button>
                 </p>
               </>
             )}
