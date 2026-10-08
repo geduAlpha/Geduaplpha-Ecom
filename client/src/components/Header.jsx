@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCart } from "../CartContext.jsx";
 import { useUser } from "../UserContext.jsx";
@@ -296,18 +296,18 @@ export default function Header() {
       {authOpen && <AuthModal mode={authMode} setMode={setAuthMode} onClose={closeAuth} onLogin={login} />}
     </>
   );
+
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   AUTH MODAL â€” Smartphone frame design
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ════════════════════════════════════════════════════════════════════
+   AUTH MODAL — Smartphone frame design
+════════════════════════════════════════════════════════════════════ */
 const ROLES = [
-  { key: "buyer",    icon: "ðŸ›’", label: "Buyer",    desc: "Browse & buy products",  color: "#2563eb", bg: "#eff6ff" },
-  { key: "seller",   icon: "ðŸª", label: "Seller",   desc: "Post listings & sell",    color: "#16a34a", bg: "#f0fdf4" },
-  { key: "business", icon: "ðŸ¢", label: "Business", desc: "Verified business store", color: "#7c3aed", bg: "#f5f3ff" },
+  { key: "buyer",    icon: "\uD83D\uDED2", label: "Buyer",    desc: "Browse and buy products",  color: "#2563eb", bg: "#eff6ff" },
+  { key: "seller",   icon: "\uD83C\uDFEA", label: "Seller",   desc: "Post listings and sell",    color: "#16a34a", bg: "#f0fdf4" },
+  { key: "business", icon: "\uD83C\uDFE2", label: "Business", desc: "Verified business store",   color: "#7c3aed", bg: "#f5f3ff" },
 ];
 
-/* Animated signal bars */
 function SignalBars() {
   return (
     <div className="sp-signal">
@@ -315,7 +315,6 @@ function SignalBars() {
     </div>
   );
 }
-/* WiFi icon */
 function WifiIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="13" height="13">
@@ -326,7 +325,6 @@ function WifiIcon() {
     </svg>
   );
 }
-/* Battery icon */
 function BatteryIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="11">
@@ -338,14 +336,12 @@ function BatteryIcon() {
 }
 
 function AuthModal({ mode, setMode, onClose, onLogin }) {
-  /* login */
   const [loginEmail,    setLoginEmail]    = useState("");
   const [loginPw,       setLoginPw]       = useState("");
   const [loginErrors,   setLoginErrors]   = useState({});
   const [loginLoading,  setLoginLoading]  = useState(false);
   const [showLoginPw,   setShowLoginPw]   = useState(false);
 
-  /* signup */
   const [signupStep,    setSignupStep]    = useState(1);
   const [role,          setRole]          = useState("buyer");
   const [firstName,     setFirstName]     = useState("");
@@ -360,7 +356,7 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
   const [signupLoading, setSignupLoading] = useState(false);
 
   const now = new Date();
-  const timeStr = now.toLocaleTimeString("en-ET", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 
   async function handleLogin(e) {
     e.preventDefault(); setLoginErrors({});
@@ -376,11 +372,11 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
   async function handleSignup(e) {
     e.preventDefault(); setSignupErrors({});
     const errs = {};
-    if (!firstName.trim())    errs.firstName = "First name is required";
-    if (!email.trim())        errs.email     = "Email is required";
-    if (password.length < 6)  errs.password  = "At least 6 characters";
-    if (password !== confirmPw) errs.confirmPw = "Passwords don't match";
-    if (!agreed)              errs.terms     = "You must agree to Terms & Conditions";
+    if (!firstName.trim())      errs.firstName = "First name is required";
+    if (!email.trim())          errs.email     = "Email address is required";
+    if (password.length < 6)    errs.password  = "Password must be at least 6 characters";
+    if (password !== confirmPw) errs.confirmPw = "Passwords do not match";
+    if (!agreed)                errs.terms     = "You must agree to the Terms and Conditions";
     if (Object.keys(errs).length) { setSignupErrors(errs); return; }
     setSignupLoading(true);
     try {
@@ -397,15 +393,12 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
 
   return (
     <div className="sp-scrim" onClick={onClose}>
-      {/* â”€â”€ Phone outer frame â”€â”€ */}
       <div className="sp-phone" onClick={(e) => e.stopPropagation()}>
 
-        {/* Side buttons */}
         <div className="sp-btn-vol-up" />
         <div className="sp-btn-vol-dn" />
         <div className="sp-btn-power" />
 
-        {/* â”€â”€ Phone inner screen â”€â”€ */}
         <div className="sp-screen">
 
           {/* Status bar */}
@@ -425,19 +418,19 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
               <div className="sp-app-logo-icon">G</div>
               <span>Gedualpha</span>
             </div>
-            <button className="sp-close-btn" onClick={onClose} aria-label="Close">âœ•</button>
+            <button className="sp-close-btn" onClick={onClose} aria-label="Close">x</button>
           </div>
 
-          {/* Scrollable content */}
           <div className="sp-content">
 
-            {/* â”€â”€ SIGN IN â”€â”€ */}
+            {/* ── SIGN IN ── */}
             {mode === "login" && (
               <div className="sp-view">
                 <div className="sp-hero-wrap">
                   <div className="sp-hero-avatar">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="36" height="36">
-                      <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                      <circle cx="12" cy="8" r="4"/>
+                      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
                     </svg>
                   </div>
                   <h2 className="sp-heading">Welcome Back!</h2>
@@ -445,10 +438,14 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
                 </div>
 
                 <form onSubmit={handleLogin} className="sp-form" noValidate>
-                  {loginErrors.form && <div className="sp-err-banner">âš ï¸ {loginErrors.form}</div>}
+                  {loginErrors.form && (
+                    <div className="sp-err-banner">Warning: {loginErrors.form}</div>
+                  )}
 
                   <div className="sp-field">
-                    <div className="sp-field-icon">âœ‰ï¸</div>
+                    <div className="sp-field-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                    </div>
                     <input className={`sp-input ${loginErrors.email ? "sp-input--err" : ""}`}
                       type="email" placeholder="Email address"
                       value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} autoFocus />
@@ -456,20 +453,23 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
                   {loginErrors.email && <span className="sp-err">{loginErrors.email}</span>}
 
                   <div className="sp-field">
-                    <div className="sp-field-icon">ðŸ”’</div>
+                    <div className="sp-field-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </div>
                     <input className={`sp-input ${loginErrors.password ? "sp-input--err" : ""}`}
                       type={showLoginPw ? "text" : "password"} placeholder="Password"
                       value={loginPw} onChange={(e) => setLoginPw(e.target.value)} />
-                    <button type="button" className="sp-eye" onClick={() => setShowLoginPw((v) => !v)}>
-                      {showLoginPw ? "ðŸ™ˆ" : "ðŸ‘ï¸"}
+                    <button type="button" className="sp-eye" onClick={() => setShowLoginPw((v) => !v)}
+                      aria-label={showLoginPw ? "Hide password" : "Show password"}>
+                      {showLoginPw
+                        ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
                     </button>
                   </div>
                   {loginErrors.password && <span className="sp-err">{loginErrors.password}</span>}
 
                   <button type="submit" className="sp-submit" disabled={loginLoading}>
-                    {loginLoading
-                      ? <span className="sp-spinner" />
-                      : <>Sign In <span className="sp-submit-arrow">â†’</span></>}
+                    {loginLoading ? <span className="sp-spinner" /> : "Sign In"}
                   </button>
                 </form>
 
@@ -477,17 +477,25 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
 
                 <p className="sp-switch-line">
                   New to Gedualpha?{" "}
-                  <button className="sp-switch-btn" onClick={() => { setMode("signup"); setSignupStep(1); }}>Create account</button>
+                  <button className="sp-switch-btn" onClick={() => { setMode("signup"); setSignupStep(1); }}>
+                    Create account
+                  </button>
                 </p>
               </div>
             )}
 
-            {/* â”€â”€ SIGN UP step 1: role â”€â”€ */}
+            {/* ── SIGN UP step 1: choose role ── */}
             {mode === "signup" && signupStep === 1 && (
               <div className="sp-view">
                 <div className="sp-hero-wrap">
-                  <div className="sp-hero-avatar sp-hero-avatar--green">ðŸš€</div>
-                  <h2 className="sp-heading">Let's Get Started</h2>
+                  <div className="sp-hero-avatar sp-hero-avatar--green">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="34" height="34">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                      <path d="M2 17l10 5 10-5"/>
+                      <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                  </div>
+                  <h2 className="sp-heading">Get Started</h2>
                   <p className="sp-subtext">How will you use Gedualpha?</p>
                 </div>
 
@@ -499,12 +507,14 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
                       onClick={() => setRole(r.key)}>
                       <span className="sp-role-icon">{r.icon}</span>
                       <div className="sp-role-text">
-                        <div className="sp-role-name" style={role === r.key ? { color: r.color } : {}}>{r.label}</div>
+                        <div className="sp-role-name" style={role === r.key ? { color: r.color } : {}}>
+                          {r.label}
+                        </div>
                         <div className="sp-role-desc">{r.desc}</div>
                       </div>
                       <div className={`sp-role-radio ${role === r.key ? "checked" : ""}`}
                         style={role === r.key ? { borderColor: r.color, background: r.color } : {}}>
-                        {role === r.key && <span>âœ“</span>}
+                        {role === r.key && <span>&#10003;</span>}
                       </div>
                     </button>
                   ))}
@@ -512,43 +522,47 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
 
                 <button className="sp-submit" onClick={() => setSignupStep(2)}
                   style={selectedRole ? { background: selectedRole.color } : {}}>
-                  Continue as {selectedRole?.label} â†’
+                  Continue as {selectedRole?.label}
                 </button>
 
                 <p className="sp-switch-line">
-                  Have an account?{" "}
+                  Already have an account?{" "}
                   <button className="sp-switch-btn" onClick={() => setMode("login")}>Sign In</button>
                 </p>
               </div>
             )}
 
-            {/* â”€â”€ SIGN UP step 2: form â”€â”€ */}
+            {/* ── SIGN UP step 2: fill details ── */}
             {mode === "signup" && signupStep === 2 && (
               <div className="sp-view">
-                {/* Selected role pill */}
                 <div className="sp-role-pill"
-                  style={{ background: selectedRole?.bg, color: selectedRole?.color, borderColor: selectedRole?.color + "44" }}>
+                  style={{ background: selectedRole?.bg, color: selectedRole?.color, borderColor: (selectedRole?.color || "#ccc") + "44" }}>
                   {selectedRole?.icon} <strong>{selectedRole?.label}</strong> Account
                 </div>
 
                 <div className="sp-setup-header">
-                  <div className="sp-hero-avatar" style={{ background: selectedRole?.bg, color: selectedRole?.color }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="30" height="30">
-                      <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                  <div className="sp-hero-avatar" style={{ background: selectedRole?.bg, color: selectedRole?.color, width: 52, height: 52, boxShadow: "none" }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="28" height="28">
+                      <circle cx="12" cy="8" r="4"/>
+                      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
                     </svg>
                   </div>
                   <div>
-                    <h2 className="sp-heading" style={{ marginBottom: 0 }}>Setup Profile</h2>
-                    <p className="sp-subtext" style={{ marginTop: "0.2rem" }}>Fill in your details</p>
+                    <h2 className="sp-heading" style={{ marginBottom: 0, fontSize: "1.2rem" }}>Setup Profile</h2>
+                    <p className="sp-subtext" style={{ marginTop: "0.2rem" }}>Fill in your details below</p>
                   </div>
                 </div>
 
                 <form onSubmit={handleSignup} className="sp-form" noValidate>
-                  {signupErrors.form && <div className="sp-err-banner">âš ï¸ {signupErrors.form}</div>}
+                  {signupErrors.form && (
+                    <div className="sp-err-banner">Warning: {signupErrors.form}</div>
+                  )}
 
                   <div className="sp-row">
                     <div className="sp-field" style={{ flex: 1 }}>
-                      <div className="sp-field-icon">ðŸ‘¤</div>
+                      <div className="sp-field-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="15" height="15"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                      </div>
                       <input className={`sp-input ${signupErrors.firstName ? "sp-input--err" : ""}`}
                         type="text" placeholder="First name"
                         value={firstName} onChange={(e) => setFirstName(e.target.value)} autoFocus />
@@ -561,7 +575,9 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
                   {signupErrors.firstName && <span className="sp-err">{signupErrors.firstName}</span>}
 
                   <div className="sp-field">
-                    <div className="sp-field-icon">âœ‰ï¸</div>
+                    <div className="sp-field-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                    </div>
                     <input className={`sp-input ${signupErrors.email ? "sp-input--err" : ""}`}
                       type="email" placeholder="Email address"
                       value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -569,24 +585,33 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
                   {signupErrors.email && <span className="sp-err">{signupErrors.email}</span>}
 
                   <div className="sp-field">
-                    <div className="sp-field-icon">ðŸ“ž</div>
-                    <input className="sp-input" type="tel" placeholder="Phone number (+251â€¦)"
+                    <div className="sp-field-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="15" height="15"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.61 4.9 2 2 0 0 1 3.6 2.69h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </div>
+                    <input className="sp-input" type="tel" placeholder="Phone number (+251...)"
                       value={phone} onChange={(e) => setPhone(e.target.value)} />
                   </div>
 
                   <div className="sp-field">
-                    <div className="sp-field-icon">ðŸ”’</div>
+                    <div className="sp-field-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="15" height="15"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </div>
                     <input className={`sp-input ${signupErrors.password ? "sp-input--err" : ""}`}
-                      type={showPw ? "text" : "password"} placeholder="Password (min 6 chars)"
+                      type={showPw ? "text" : "password"} placeholder="Password (min 6 characters)"
                       value={password} onChange={(e) => setPassword(e.target.value)} />
-                    <button type="button" className="sp-eye" onClick={() => setShowPw((v) => !v)}>
-                      {showPw ? "ðŸ™ˆ" : "ðŸ‘ï¸"}
+                    <button type="button" className="sp-eye" onClick={() => setShowPw((v) => !v)}
+                      aria-label={showPw ? "Hide password" : "Show password"}>
+                      {showPw
+                        ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="15" height="15"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="15" height="15"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
                     </button>
                   </div>
                   {signupErrors.password && <span className="sp-err">{signupErrors.password}</span>}
 
                   <div className="sp-field">
-                    <div className="sp-field-icon">ðŸ”</div>
+                    <div className="sp-field-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="15" height="15"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
                     <input className={`sp-input ${signupErrors.confirmPw ? "sp-input--err" : ""}`}
                       type="password" placeholder="Confirm password"
                       value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} />
@@ -596,33 +621,33 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
                   <label className="sp-agree">
                     <div className={`sp-checkbox ${agreed ? "checked" : ""}`}
                       onClick={() => setAgreed((v) => !v)}>
-                      {agreed && "âœ“"}
+                      {agreed && <span>&#10003;</span>}
                     </div>
                     <span>
-                      Agree with{" "}
-                      <a href="#" className="sp-link" onClick={(e) => e.stopPropagation()}>terms &amp; conditions</a>
+                      I agree to the{" "}
+                      <a href="#" className="sp-link" onClick={(e) => e.stopPropagation()}>
+                        Terms and Conditions
+                      </a>
                     </span>
                   </label>
                   {signupErrors.terms && <span className="sp-err">{signupErrors.terms}</span>}
 
                   <button type="submit" className="sp-submit" disabled={signupLoading}
                     style={selectedRole ? { background: selectedRole.color } : {}}>
-                    {signupLoading
-                      ? <span className="sp-spinner" />
-                      : <>Create Account <span className="sp-submit-arrow">â†’</span></>}
+                    {signupLoading ? <span className="sp-spinner" /> : "Create Account"}
                   </button>
                 </form>
 
                 <p className="sp-switch-line">
-                  I'm already a member.{" "}
+                  Already a member?{" "}
                   <button className="sp-switch-btn" onClick={() => setMode("login")}>Sign In</button>
                 </p>
               </div>
             )}
 
-          </div>{/* end sp-content */}
+          </div>
 
-          {/* Bottom nav bar (decorative â€” shows app context) */}
+          {/* Bottom navigation bar */}
           <div className="sp-navbar">
             <button className="sp-nav-item active">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -645,12 +670,10 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
             </button>
           </div>
 
-          {/* Home indicator */}
           <div className="sp-home-indicator" />
 
-        </div>{/* end sp-screen */}
-      </div>{/* end sp-phone */}
+        </div>
+      </div>
     </div>
   );
 }
-
