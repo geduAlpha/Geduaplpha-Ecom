@@ -741,6 +741,115 @@ app.post("/api/admin/login", (req, res) => {
   res.status(401).json({ error: "Invalid admin passcode" });
 });
 
+// ─── Admin Analytics ─────────────────────────────────────────────────────────
+app.get("/api/admin/analytics", async (_req, res) => {
+  try {
+    const [ordersList, productsList] = await Promise.all([
+      Order.find().lean(),
+      Product.find().lean(),
+    ]);
+
+    // ── Revenue by day (last 30 days) ──────────────────────────────────
+    const now = new Date();
+    const day30ago = new Date(now - 30 * 24 * 60 * 60 * 1000);
+    const revenueByDay = {};
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(day30ago.getTime() + i * 24 * 60 * 60 * 1000);
+      revenueByDay[d.toISOString().slice(0, 10)] = 0;
+    }
+    ordersList.forEach((o) => {
+      if (o.status === "cancelled") return;
+      const day = new Date(o.createdAt).toISOString().slice(0, 10);
+      if (revenueByDay[day] !== undefined) revenueByDay[day] += o.total || 0;
+    });
+    const dailyRevenue = Object.entries(revenueByDay).map(([date, revenue]) => ({ date, revenue }));
+
+    // ── Orders by day (last 30 days) ──────────────────────────────────
+    const ordersByDay = {};
+    Object.keys(revenueByDay).forEach((d) => { ordersByDay[d] = 0; });
+    ordersList.forEach((o) => {
+      const day = new Date(o.createdAt).toISOString().slice(0, 10);
+      if (ordersByDay[day] !== undefined) ordersByDay[day]++;
+    });
+    const dailyOrders = Object.entries(ordersByDay).map(([date, count]) => ({ date, count }));
+
+    // ── Sales (revenue) by category ───────────────────────────────────
+    const catRevenue = {};
+    const catOrders  = {};
+    ordersList.forEach((o) => {
+      if (o.status === "cancelled") return;
+      (o.items || []).forEach((it) => {
+        const prod = productsList.find((p) => p._id === it.productId);
+        const cat  = prod?.category || "other";
+        catRevenue[cat] = (catRevenue[cat] || 0) + (it.price * it.qty);
+        catOrders[cat]  = (catOrders[cat]  || 0) + it.qty;
+      });
+    });
+    const categoryStats = Object.entries(catRevenue)
+      .map(([category, revenue]) => ({ category, revenue, orders: catOrders[category] || 0 }))
+      .sort((a, b) => b.revenue - a.revenue);
+
+    // ── Top products by views ─────────────────────────────────────────
+    const topByViews = [...productsList]
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 8)
+      .map(({ _id, name, category, views, price }) => ({ id: _id, name, category, views: views || 0, price }));
+
+    // ── Top products by sales quantity ────────────────────────────────
+    const salesQty = {};
+    const salesRev = {};
+    ordersList.forEach((o) => {
+      if (o.status === "cancelled") return;
+      (o.items || []).forEach((it) => {
+        salesQty[it.productId] = (salesQty[it.productId] || 0) + it.qty;
+        salesRev[it.productId] = (salesRev[it.productId] || 0) + it.price * it.qty;
+      });
+    });
+    const topBySales = Object.entries(salesQty)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([pid, qty]) => {
+        const prod = productsList.find((p) => p._id === pid);
+        return { id: pid, name: prod?.name || pid, category: prod?.category || "—", qty, revenue: salesRev[pid] || 0 };
+      });
+
+    // ── Payment method split ──────────────────────────────────────────
+    const paymentSplit = {};
+    ordersList.forEach((o) => {
+      const m = o.paymentMethod || "telebirr";
+      paymentSplit[m] = (paymentSplit[m] || 0) + 1;
+    });
+
+    // ── Order status breakdown ────────────────────────────────────────
+    const statusBreakdown = { pending: 0, paid: 0, processing: 0, shipped: 0, delivered: 0, cancelled: 0 };
+    ordersList.forEach((o) => {
+      const s = o.status || "pending";
+      if (statusBreakdown[s] !== undefined) statusBreakdown[s]++;
+    });
+
+    // ── Summary totals ────────────────────────────────────────────────
+    const totalRevenue = ordersList
+      .filter((o) => o.status !== "cancelled")
+      .reduce((s, o) => s + (o.total || 0), 0);
+
+    res.json({
+      totalRevenue,
+      totalOrders: ordersList.length,
+      totalProducts: productsList.length,
+      dailyRevenue,
+      dailyOrders,
+      categoryStats,
+      topByViews,
+      topBySales,
+      paymentSplit,
+      statusBreakdown,
+    });
+  } catch (err) {
+    console.error("Analytics error:", err);
+    res.status(500).json({ error: "Analytics failed: " + err.message });
+  }
+});
+
 // Admin Dashboard Overview Stats
 app.get("/api/admin/stats", async (_req, res) => {
   try {

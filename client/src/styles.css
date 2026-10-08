@@ -7836,3 +7836,246 @@ html.dark .cd-ref-box.pending { background: rgba(234,179,8,0.12); color: #facc15
   transition: background var(--transition);
 }
 .cd-view-all-btn:hover { background: var(--accent-muted); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANALYTICS CHARTS  — pure SVG / CSS, zero dependencies
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Chart tab switcher */
+.ch-tab-bar {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  padding: 0.25rem;
+  background: var(--bg-input);
+  border-radius: var(--radius-xl);
+  width: fit-content;
+  max-width: 100%;
+}
+.ch-tab {
+  padding: 0.5rem 1.125rem;
+  border-radius: var(--radius-lg);
+  border: none;
+  background: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--transition), color var(--transition);
+  white-space: nowrap;
+}
+.ch-tab:hover  { background: var(--bg-card); color: var(--text-primary); }
+.ch-tab.active { background: var(--bg-card); color: var(--text-primary); box-shadow: var(--shadow-sm); }
+
+/* Loading state */
+.ch-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1.5rem;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+
+/* Empty state inside chart */
+.ch-empty {
+  padding: 2.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Panel wrapper — sub-charts arranged here */
+.ch-panel-wrap { display: flex; flex-direction: column; gap: 1.25rem; }
+.ch-panel      { display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* 2-col grid for charts side by side */
+.ch-panel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+@media (max-width: 900px) {
+  .ch-panel-grid { grid-template-columns: 1fr; }
+}
+
+/* Row of two donut charts */
+.ch-panel-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+@media (max-width: 700px) {
+  .ch-panel-row { grid-template-columns: 1fr; }
+}
+
+.ch-panel-sub {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-full);
+}
+
+/* ── SVG line chart ── */
+.ch-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+/* ── Horizontal bar chart ── */
+.ch-bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+.ch-bar-row { display: flex; flex-direction: column; gap: 0.2rem; }
+.ch-bar-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ch-bar-cat {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+.ch-bar-val {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.ch-bar-track {
+  height: 10px;
+  background: var(--bg-input);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.ch-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 4px;
+}
+
+/* ── Donut chart ── */
+.ch-donut-card { min-height: 0; }
+.ch-donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.5rem 0.25rem;
+  flex-wrap: wrap;
+}
+.ch-donut-svg { flex-shrink: 0; overflow: visible; }
+.ch-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+.ch-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+.ch-legend-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+.ch-legend-label {
+  flex: 1;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+}
+.ch-legend-val {
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.ch-legend-pct {
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* ── Top products list ── */
+.ch-top-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+.ch-top-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.ch-top-rank {
+  width: 1.5rem;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  text-align: center;
+  flex-shrink: 0;
+}
+.ch-top-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.ch-top-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ch-top-bar-track {
+  height: 6px;
+  background: var(--bg-input);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.ch-top-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 4px;
+}
+.ch-top-val {
+  font-size: 0.875rem;
+  font-weight: 800;
+  white-space: nowrap;
+  text-align: right;
+  min-width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+}
+.ch-top-val-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* dark mode overrides */
+html.dark .ch-tab.active { box-shadow: 0 1px 4px rgba(0,0,0,0.4); }

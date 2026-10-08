@@ -54,7 +54,8 @@ export const api = {
 
   // Admin APIs
   adminLogin: (password) => request("/admin/login", { method: "POST", body: JSON.stringify({ password }) }),
-  adminStats: (signal) => request("/admin/stats", { signal }),
+  adminStats:     (signal) => request("/admin/stats",     { signal }),
+  adminAnalytics: (signal) => request("/admin/analytics", { signal }),
   adminProducts: (params, signal) => {
     const cleanParams = Object.fromEntries(
       Object.entries(params || {}).filter(([_, v]) => v !== undefined && v !== null && v !== "")

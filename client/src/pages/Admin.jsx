@@ -4,6 +4,11 @@ import { api } from "../api.js";
 import { money } from "../money.js";
 import ProductArt from "../components/ProductArt.jsx";
 import { getAdminAuth, setAdminAuth } from "../components/Header.jsx";
+import {
+  LineChart, CategoryBarChart, DonutChart,
+  TopProductsTable, Sparkline,
+  CAT_COLORS, STATUS_COLORS, PAY_COLORS,
+} from "../components/Charts.jsx";
 
 /* ── Category & status config ───────────────────────────────────────── */
 const CATEGORIES = [
@@ -75,10 +80,16 @@ export default function Admin() {
   /* sidebar collapse on mobile */
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  /* analytics */
+  const [analytics,    setAnalytics]    = useState(null);
+  const [anlLoading,   setAnlLoading]   = useState(false);
+  const [anlTab,       setAnlTab]       = useState("revenue"); // "revenue"|"category"|"products"|"orders"
+
   /* ── Boot ── */
   useEffect(() => {
     if (!isAuth) return;
     loadStats();
+    loadAnalytics();
   }, [isAuth]);
 
   useEffect(() => {
@@ -105,6 +116,13 @@ export default function Admin() {
     try { const r = await api.adminStats(); setStats(r); }
     catch (e) { console.error(e); }
     finally { setStatsLoading(false); }
+  }
+
+  async function loadAnalytics() {
+    setAnlLoading(true);
+    try { const r = await api.adminAnalytics(); setAnalytics(r); }
+    catch (e) { console.error(e); }
+    finally { setAnlLoading(false); }
   }
 
   async function loadProducts() {
@@ -377,113 +395,312 @@ export default function Admin() {
           {/* ════ DASHBOARD ════ */}
           {activeTab === "dashboard" && (
             <div className="adm-tab-body">
+
+              {/* ── Section header ── */}
               <div className="adm-section-head">
                 <div>
-                  <h2>Overview</h2>
-                  <p>Real-time snapshot of your marketplace.</p>
+                  <h2>Analytics Dashboard</h2>
+                  <p>Sales performance, trends and marketplace insights.</p>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={loadStats}>↻ Refresh</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => { loadStats(); loadAnalytics(); }}>
+                  ↻ Refresh
+                </button>
               </div>
 
-              {/* KPI grid */}
+              {/* ── KPI cards with sparklines ── */}
               <div className="adm-kpi-grid">
                 {[
-                  { icon: "💵", label: "Total Revenue", value: stats ? money(stats.totalRevenue) : "…", sub: "All paid orders", bg: "#ecfdf5", color: "#059669" },
-                  { icon: "🛒", label: "Total Orders",   value: stats?.totalOrders ?? "…",   sub: `${stats?.statusCounts?.pending ?? 0} pending`, bg: "#eff6ff", color: "#2563eb" },
-                  { icon: "📦", label: "Active Listings",value: stats?.totalProducts ?? "…",  sub: stats?.lowStockCount ? `⚠️ ${stats.lowStockCount} low stock` : "All in stock", bg: "#fdf4ff", color: "#9333ea" },
-                  { icon: "👁️", label: "Product Views",  value: stats?.totalViews ?? "…",     sub: "Buyer impressions", bg: "#fffbeb", color: "#d97706" },
+                  { icon: "💵", label: "Total Revenue",  value: stats ? money(stats.totalRevenue) : "…",  sub: "All non-cancelled orders", bg: "#ecfdf5", color: "#059669", spark: analytics?.dailyRevenue, sKey: "revenue" },
+                  { icon: "🛒", label: "Total Orders",   value: stats?.totalOrders ?? "…",                sub: `${stats?.statusCounts?.pending ?? 0} pending`, bg: "#eff6ff", color: "#2563eb", spark: analytics?.dailyOrders, sKey: "count" },
+                  { icon: "📦", label: "Active Listings",value: stats?.totalProducts ?? "…",              sub: stats?.lowStockCount ? `⚠️ ${stats.lowStockCount} low stock` : "All in stock", bg: "#fdf4ff", color: "#9333ea", spark: null, sKey: null },
+                  { icon: "👁️", label: "Product Views",  value: stats?.totalViews ?? "…",                sub: "Buyer impressions", bg: "#fffbeb", color: "#d97706", spark: null, sKey: null },
                 ].map((k) => (
-                  <div className="adm-kpi-card" key={k.label}>
+                  <div className="adm-kpi-card" key={k.label} style={{ position: "relative" }}>
                     <div className="adm-kpi-icon" style={{ background: k.bg, color: k.color }}>{k.icon}</div>
-                    <div className="adm-kpi-body">
+                    <div className="adm-kpi-body" style={{ flex: 1 }}>
                       <div className="adm-kpi-label">{k.label}</div>
                       <div className="adm-kpi-val">{k.value}</div>
                       <div className="adm-kpi-sub">{k.sub}</div>
                     </div>
+                    {k.spark && analytics && (
+                      <div style={{ position: "absolute", bottom: "0.75rem", right: "0.875rem", opacity: 0.7 }}>
+                        <Sparkline data={k.spark} valueKey={k.sKey} color={k.color} />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
 
-              {/* Status breakdown */}
-              <div className="adm-card">
-                <div className="adm-card-head"><h3>Orders by Status</h3></div>
-                <div className="adm-status-row">
-                  {ORDER_STATUSES.map((s) => (
-                    <div className={`adm-status-pill ${s}`} key={s}>
-                      <span>{STATUS_META[s].label}</span>
-                      <strong>{stats?.statusCounts?.[s] ?? 0}</strong>
-                    </div>
-                  ))}
-                </div>
+              {/* ── Chart tab switcher ── */}
+              <div className="ch-tab-bar">
+                {[
+                  { id: "revenue",  label: "📈 Revenue Trend" },
+                  { id: "category", label: "🏷️ By Category" },
+                  { id: "products", label: "🏆 Top Products" },
+                  { id: "orders",   label: "🧩 Order Breakdown" },
+                ].map((t) => (
+                  <button key={t.id} className={`ch-tab ${anlTab === t.id ? "active" : ""}`}
+                    onClick={() => setAnlTab(t.id)}>
+                    {t.label}
+                  </button>
+                ))}
               </div>
 
-              {/* Recent orders + quick actions */}
-              <div className="adm-dual-grid">
-                <div className="adm-card">
-                  <div className="adm-card-head">
-                    <h3>Recent Orders</h3>
-                    <button className="btn btn-ghost btn-sm" onClick={() => { setActiveTab("orders"); loadOrders(); }}>View All →</button>
-                  </div>
-                  {stats?.recentOrders?.length > 0 ? (
-                    <div className="adm-table-wrap">
-                      <table className="adm-table">
-                        <thead><tr>
-                          <th>Order</th><th>Customer</th><th>Amount</th><th>Status</th><th></th>
-                        </tr></thead>
-                        <tbody>
-                          {stats.recentOrders.map((o) => (
-                            <tr key={o.id}>
-                              <td><strong>#{o.id?.slice(0,8)}</strong></td>
-                              <td>
-                                <div style={{ fontWeight: 600 }}>{o.customer?.name}</div>
-                                <div className="adm-cell-sub">{o.customer?.city}</div>
-                              </td>
-                              <td><strong>{money(o.total)}</strong></td>
-                              <td><span className={`adm-badge-status ${o.status}`}>{o.status}</span></td>
-                              <td>
-                                <button className="adm-btn-view" onClick={() => setOrderModal({ open: true, data: o })}>View</button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+              {/* ── Chart panels ── */}
+              {anlLoading && <div className="ch-loading"><div className="cd-spinner" /> Loading analytics…</div>}
+
+              {!anlLoading && analytics && (
+                <div className="ch-panel-wrap">
+
+                  {/* Revenue & Orders Trend */}
+                  {anlTab === "revenue" && (
+                    <div className="ch-panel">
+                      <div className="ch-panel-grid">
+                        <div className="adm-card">
+                          <div className="adm-card-head">
+                            <h3>📈 Daily Revenue (Last 30 Days)</h3>
+                            <span className="ch-panel-sub">ETB</span>
+                          </div>
+                          <LineChart data={analytics.dailyRevenue} valueKey="revenue" color="#16a34a" label="Daily Revenue" />
+                        </div>
+                        <div className="adm-card">
+                          <div className="adm-card-head">
+                            <h3>🛒 Daily Orders (Last 30 Days)</h3>
+                            <span className="ch-panel-sub">count</span>
+                          </div>
+                          <LineChart data={analytics.dailyOrders} valueKey="count" color="#2563eb" label="Daily Orders" />
+                        </div>
+                      </div>
+
+                      {/* Payment method donut */}
+                      <div className="ch-panel-row">
+                        <div className="adm-card ch-donut-card">
+                          <div className="adm-card-head"><h3>💳 Payment Methods</h3></div>
+                          <DonutChart
+                            data={Object.entries(analytics.paymentSplit).map(([k, v]) => ({
+                              key: k, label: k === "telebirr" ? "Telebirr" : k === "cbe" ? "CBE Birr" : k === "chapa" ? "Chapa" : k === "cod" ? "Cash on Delivery" : k,
+                              value: v,
+                            }))}
+                            colors={PAY_COLORS}
+                          />
+                        </div>
+
+                        {/* Order status donut */}
+                        <div className="adm-card ch-donut-card">
+                          <div className="adm-card-head"><h3>🧩 Order Status Split</h3></div>
+                          <DonutChart
+                            data={Object.entries(analytics.statusBreakdown)
+                              .filter(([, v]) => v > 0)
+                              .map(([k, v]) => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1), value: v }))}
+                            colors={STATUS_COLORS}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="adm-empty">No orders yet.</div>
+                  )}
+
+                  {/* Category breakdown */}
+                  {anlTab === "category" && (
+                    <div className="ch-panel">
+                      <div className="ch-panel-grid">
+                        <div className="adm-card">
+                          <div className="adm-card-head">
+                            <h3>💰 Revenue by Category</h3>
+                            <span className="ch-panel-sub">ETB</span>
+                          </div>
+                          <CategoryBarChart data={analytics.categoryStats} valueKey="revenue" />
+                        </div>
+                        <div className="adm-card">
+                          <div className="adm-card-head">
+                            <h3>📦 Units Sold by Category</h3>
+                            <span className="ch-panel-sub">qty</span>
+                          </div>
+                          <CategoryBarChart
+                            data={[...analytics.categoryStats].sort((a, b) => b.orders - a.orders)}
+                            valueKey="orders"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Category colour legend */}
+                      <div className="adm-card">
+                        <div className="adm-card-head"><h3>Category Summary</h3></div>
+                        <div className="adm-table-wrap">
+                          <table className="adm-table">
+                            <thead><tr>
+                              <th>Category</th><th>Revenue (ETB)</th><th>Units Sold</th><th>Share</th>
+                            </tr></thead>
+                            <tbody>
+                              {analytics.categoryStats.map((c) => {
+                                const totalRev = analytics.categoryStats.reduce((s, x) => s + x.revenue, 0);
+                                const share = totalRev ? Math.round((c.revenue / totalRev) * 100) : 0;
+                                return (
+                                  <tr key={c.category}>
+                                    <td>
+                                      <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>
+                                        <span style={{ width:"0.75rem", height:"0.75rem", borderRadius:"50%", background: CAT_COLORS[c.category] || "#6b7280", display:"inline-block", flexShrink:0 }} />
+                                        <strong style={{ textTransform:"capitalize" }}>{c.category}</strong>
+                                      </div>
+                                    </td>
+                                    <td><strong>{money(c.revenue)}</strong></td>
+                                    <td>{c.orders}</td>
+                                    <td>
+                                      <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>
+                                        <div style={{ flex:1, height:"6px", background:"var(--bg-input)", borderRadius:"99px", overflow:"hidden" }}>
+                                          <div style={{ width:`${share}%`, height:"100%", background: CAT_COLORS[c.category] || "#6b7280", borderRadius:"99px" }} />
+                                        </div>
+                                        <span style={{ fontSize:"0.75rem", color:"var(--text-muted)", minWidth:"2rem" }}>{share}%</span>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Top products */}
+                  {anlTab === "products" && (
+                    <div className="ch-panel">
+                      <div className="ch-panel-grid">
+                        <div className="adm-card">
+                          <div className="adm-card-head">
+                            <h3>👁️ Most Viewed Products</h3>
+                            <span className="ch-panel-sub">last all-time</span>
+                          </div>
+                          <TopProductsTable data={analytics.topByViews} valueKey="views" valueLabel="views" />
+                        </div>
+                        <div className="adm-card">
+                          <div className="adm-card-head">
+                            <h3>🏆 Best Selling Products</h3>
+                            <span className="ch-panel-sub">by units sold</span>
+                          </div>
+                          <TopProductsTable data={analytics.topBySales} valueKey="qty" valueLabel="sold" />
+                        </div>
+                      </div>
+                      <div className="adm-card">
+                        <div className="adm-card-head">
+                          <h3>💰 Top Revenue Generating Products</h3>
+                        </div>
+                        <TopProductsTable data={[...analytics.topBySales].sort((a,b)=>b.revenue-a.revenue)} valueKey="revenue" valueLabel="" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Order & status breakdown */}
+                  {anlTab === "orders" && (
+                    <div className="ch-panel">
+                      <div className="ch-panel-row">
+                        <div className="adm-card ch-donut-card">
+                          <div className="adm-card-head"><h3>🧩 Order Status</h3></div>
+                          <DonutChart
+                            data={Object.entries(analytics.statusBreakdown)
+                              .filter(([, v]) => v > 0)
+                              .map(([k, v]) => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1), value: v }))}
+                            colors={STATUS_COLORS}
+                            size={180}
+                          />
+                        </div>
+                        <div className="adm-card ch-donut-card">
+                          <div className="adm-card-head"><h3>💳 Payment Methods</h3></div>
+                          <DonutChart
+                            data={Object.entries(analytics.paymentSplit).map(([k, v]) => ({
+                              key: k,
+                              label: k === "telebirr" ? "Telebirr" : k === "cbe" ? "CBE Birr" : k === "chapa" ? "Chapa" : k === "cod" ? "Cash" : k,
+                              value: v,
+                            }))}
+                            colors={PAY_COLORS}
+                            size={180}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Status breakdown table */}
+                      <div className="adm-card">
+                        <div className="adm-card-head"><h3>Order Status Breakdown</h3></div>
+                        <div className="adm-status-row" style={{ flexWrap:"wrap", gap:"0.75rem" }}>
+                          {Object.entries(analytics.statusBreakdown).map(([s, count]) => (
+                            <div className={`adm-status-pill ${s}`} key={s}>
+                              <span style={{ textTransform:"capitalize" }}>{s}</span>
+                              <strong>{count}</strong>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Recent orders table */}
+                      <div className="adm-card">
+                        <div className="adm-card-head">
+                          <h3>Recent Orders</h3>
+                          <button className="btn btn-ghost btn-sm" onClick={() => { setActiveTab("orders"); loadOrders(); }}>View All →</button>
+                        </div>
+                        {stats?.recentOrders?.length > 0 ? (
+                          <div className="adm-table-wrap">
+                            <table className="adm-table">
+                              <thead><tr><th>Order</th><th>Customer</th><th>Amount</th><th>Method</th><th>Status</th><th></th></tr></thead>
+                              <tbody>
+                                {stats.recentOrders.map((o) => (
+                                  <tr key={o.id}>
+                                    <td><strong>#{o.id?.slice(0,8)}</strong></td>
+                                    <td>
+                                      <div style={{ fontWeight:600 }}>{o.customer?.name}</div>
+                                      <div className="adm-cell-sub">{o.customer?.city}</div>
+                                    </td>
+                                    <td><strong>{money(o.total)}</strong></td>
+                                    <td><span className="adm-badge-gw">{o.paymentMethod || "—"}</span></td>
+                                    <td><span className={`adm-badge-status ${o.status}`}>{o.status}</span></td>
+                                    <td><button className="adm-btn-view" onClick={() => setOrderModal({ open:true, data:o })}>View</button></td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="adm-empty">No orders yet.</div>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
+              )}
 
+              {/* Quick actions + low stock always visible below charts */}
+              <div className="adm-dual-grid">
                 <div className="adm-card">
                   <div className="adm-card-head"><h3>⚡ Quick Actions</h3></div>
                   <div className="adm-quick-tiles">
                     {[
-                      { icon: "➕", title: "Add New Listing",      sub: "Upload photos, set price & location", action: openAddModal },
-                      { icon: "📦", title: "Manage Products",       sub: "Edit stock, pricing, and categories",  action: () => { setActiveTab("products"); loadProducts(); } },
-                      { icon: "💳", title: "Process Orders",        sub: "Mark Telebirr & CBE payments as paid", action: () => { setActiveTab("orders"); loadOrders(); } },
+                      { icon:"➕", title:"Add New Listing",   sub:"Upload photos, set price & location",  action: openAddModal },
+                      { icon:"📦", title:"Manage Products",   sub:"Edit stock, pricing, categories",       action: () => { setActiveTab("products"); loadProducts(); } },
+                      { icon:"💳", title:"Process Orders",    sub:"Confirm Telebirr & CBE payments",       action: () => { setActiveTab("orders"); loadOrders(); } },
                     ].map((t) => (
                       <button key={t.title} className="adm-quick-tile" onClick={t.action}>
                         <span className="adm-quick-tile-icon">{t.icon}</span>
-                        <div>
-                          <strong>{t.title}</strong>
-                          <p>{t.sub}</p>
-                        </div>
+                        <div><strong>{t.title}</strong><p>{t.sub}</p></div>
                       </button>
                     ))}
                   </div>
-
-                  {stats?.lowStockProducts?.length > 0 && (
-                    <div className="adm-low-stock">
-                      <h4>⚠️ Low Stock (≤ 3 left)</h4>
+                </div>
+                <div className="adm-card">
+                  <div className="adm-card-head"><h3>⚠️ Low Stock Alert</h3></div>
+                  {stats?.lowStockProducts?.length > 0 ? (
+                    <div className="adm-low-stock" style={{ border:"none", borderRadius:0, background:"none", padding:0 }}>
                       {stats.lowStockProducts.map((p) => (
                         <div key={p.id} className="adm-low-stock-row">
                           <span>{p.name}</span>
-                          <strong style={{ color: "#dc2626" }}>{p.stock} left</strong>
+                          <strong style={{ color:"#dc2626" }}>{p.stock} left</strong>
                         </div>
                       ))}
                     </div>
+                  ) : (
+                    <div className="adm-empty" style={{ padding:"1rem" }}>✅ All products in stock</div>
                   )}
                 </div>
               </div>
+
             </div>
           )}
 
