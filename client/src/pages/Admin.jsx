@@ -36,6 +36,7 @@ const SIDEBAR_ITEMS = [
   { id: "products",  icon: "📦", label: "Products" },
   { id: "orders",    icon: "💳", label: "Orders" },
   { id: "gateways",  icon: "⚙️", label: "Gateways" },
+  { id: "profile",   icon: "🏢", label: "Company Profile" },
 ];
 
 /* ── Blank product form ─────────────────────────────────────────────── */
@@ -76,6 +77,7 @@ export default function Admin() {
   const [modalLoading, setModalLoading] = useState(false);
   const [actionNotice, setActionNotice] = useState("");
   const [prodForm,     setProdForm]     = useState(BLANK_FORM);
+  const [prodFormErrors, setProdFormErrors] = useState({});
 
   /* sidebar collapse on mobile */
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -148,6 +150,7 @@ export default function Admin() {
   /* ── Product CRUD ── */
   function openAddModal() {
     setProdForm({ ...BLANK_FORM });
+    setProdFormErrors({});
     setProductModal({ open: true, mode: "add", data: null });
   }
 
@@ -162,6 +165,7 @@ export default function Admin() {
       sellerName: p.seller?.name || "", sellerPhone: p.seller?.phone || "",
       sellerTelegram: p.seller?.telegram || "", sellerWhatsapp: p.seller?.whatsapp || "",
     });
+    setProdFormErrors({});
     setProductModal({ open: true, mode: "edit", data: p });
   }
 
@@ -197,7 +201,19 @@ export default function Admin() {
 
   async function handleSaveProduct(e) {
     e.preventDefault();
-    if (!prodForm.name.trim() || !prodForm.price) { alert("Title and price are required."); return; }
+    // Full client-side validation — same fields the server requires
+    const errs = {};
+    if (!prodForm.name.trim())              errs.name        = "Product name is required";
+    if (!prodForm.price || Number(prodForm.price) <= 0) errs.price = "Enter a valid price (ETB)";
+    if (!prodForm.description.trim())       errs.description = "Description is required";
+    if (!prodForm.sellerPhone.trim())       errs.sellerPhone = "Seller phone is required";
+    if (Object.keys(errs).length) {
+      setProdFormErrors(errs);
+      // Scroll modal to top so user sees the errors
+      document.querySelector(".apm-modal")?.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    setProdFormErrors({});
     setModalLoading(true);
     const payload = {
       name: prodForm.name.trim(), category: prodForm.category,
@@ -221,7 +237,9 @@ export default function Admin() {
       setProductModal({ open: false, mode: "add", data: null });
       loadProducts(); loadStats();
     } catch (err) {
-      alert("Failed to save: " + err.message);
+      // Show server error at top of modal instead of browser alert
+      setProdFormErrors({ _server: err.message });
+      document.querySelector(".apm-modal")?.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setModalLoading(false);
     }
@@ -377,9 +395,11 @@ export default function Admin() {
           </div>
 
           <div className="adm-topbar-actions">
-            <button className="btn btn-accent btn-sm" onClick={openAddModal}>
-              ➕ Add Listing
-            </button>
+            {(activeTab === "products" || activeTab === "dashboard") && (
+              <button className="btn btn-accent btn-sm" onClick={openAddModal}>
+                ➕ Add Product
+              </button>
+            )}
             <div className="adm-topbar-avatar">G</div>
           </div>
         </div>
@@ -709,10 +729,9 @@ export default function Admin() {
             <div className="adm-tab-body">
               <div className="adm-section-head">
                 <div>
-                  <h2>Products & Listings</h2>
+                  <h2>Products &amp; Listings</h2>
                   <p>{productTotal} listings in the marketplace.</p>
                 </div>
-                <button className="btn btn-accent btn-sm" onClick={openAddModal}>➕ Add Product</button>
               </div>
 
               <div className="adm-filter-bar">
@@ -941,6 +960,115 @@ export default function Admin() {
             </div>
           )}
 
+          {/* ════ COMPANY PROFILE ════ */}
+          {activeTab === "profile" && (
+            <div className="adm-tab-body">
+              <div className="adm-section-head">
+                <div>
+                  <h2>Company Profile</h2>
+                  <p>Gedualpha Ecom — store identity, contact details and payment info.</p>
+                </div>
+              </div>
+
+              <div className="cp-grid">
+
+                {/* ── Brand card ── */}
+                <div className="adm-card cp-brand-card">
+                  <div className="cp-brand-logo">G</div>
+                  <div className="cp-brand-name">Gedualpha Ecom</div>
+                  <div className="cp-brand-tag">🇪🇹 Ethiopia's Verified Marketplace</div>
+                  <div className="cp-brand-desc">
+                    Gedualpha Ecom connects buyers and sellers across Addis Ababa and Ethiopia.
+                    We support Telebirr, CBE Birr and Chapa payments for seamless transactions.
+                  </div>
+                  <div className="cp-brand-stats">
+                    <div className="cp-stat">
+                      <strong>{stats?.totalProducts ?? "—"}</strong>
+                      <span>Listings</span>
+                    </div>
+                    <div className="cp-stat-div" />
+                    <div className="cp-stat">
+                      <strong>{stats?.totalOrders ?? "—"}</strong>
+                      <span>Orders</span>
+                    </div>
+                    <div className="cp-stat-div" />
+                    <div className="cp-stat">
+                      <strong>{stats?.totalViews ?? "—"}</strong>
+                      <span>Views</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Contact info ── */}
+                <div className="adm-card">
+                  <div className="adm-card-head"><h3>Contact Information</h3></div>
+                  <div className="cp-info-list">
+                    {[
+                      { icon: "🌐", label: "Website",       value: "geduaplpha-ecom.app.aletcloud.com" },
+                      { icon: "📧", label: "Support Email",  value: "support@gedualpha.com" },
+                      { icon: "📞", label: "Business Phone", value: "+251 91 262 7366" },
+                      { icon: "📱", label: "Telebirr",       value: "092627366" },
+                      { icon: "📍", label: "Address",        value: "Bole, Addis Ababa, Ethiopia" },
+                    ].map(({ icon, label, value }) => (
+                      <div key={label} className="cp-info-row">
+                        <span className="cp-info-icon">{icon}</span>
+                        <div>
+                          <div className="cp-info-label">{label}</div>
+                          <div className="cp-info-value">{value}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── Payment gateways ── */}
+                <div className="adm-card">
+                  <div className="adm-card-head"><h3>Payment Gateways</h3></div>
+                  <div className="adm-gw-fields">
+                    {[
+                      { icon: "📱", name: "Telebirr", account: "+251 92 627 366", status: "Live", color: "#0284c7" },
+                      { icon: "🏦", name: "CBE Birr",  account: "1000254874705",   status: "Live", color: "#16a34a" },
+                      { icon: "💳", name: "Chapa",     account: "API Connected",   status: "Live", color: "#7c3aed" },
+                    ].map((gw) => (
+                      <div key={gw.name} className="cp-gw-row">
+                        <span style={{ fontSize: "1.25rem" }}>{gw.icon}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.875rem" }}>{gw.name}</div>
+                          <div className="adm-cell-sub">{gw.account}</div>
+                        </div>
+                        <span className="cp-gw-badge" style={{ background: gw.color + "18", color: gw.color }}>
+                          ● {gw.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── Business clients / registered users ── */}
+                <div className="adm-card">
+                  <div className="adm-card-head"><h3>Platform Summary</h3></div>
+                  <div className="cp-platform-grid">
+                    {[
+                      { icon: "💵", label: "Total Revenue",    value: stats ? money(stats.totalRevenue) : "…",  color: "#059669", bg: "#ecfdf5" },
+                      { icon: "📦", label: "Active Listings",  value: stats?.totalProducts ?? "…",              color: "#9333ea", bg: "#fdf4ff" },
+                      { icon: "🛒", label: "Total Orders",     value: stats?.totalOrders   ?? "…",              color: "#2563eb", bg: "#eff6ff" },
+                      { icon: "👁️", label: "Product Views",    value: stats?.totalViews    ?? "…",              color: "#d97706", bg: "#fffbeb" },
+                      { icon: "⏳", label: "Pending Payments", value: stats?.statusCounts?.pending ?? 0,        color: "#eab308", bg: "#fefce8" },
+                      { icon: "✅", label: "Paid Orders",      value: stats?.statusCounts?.paid    ?? 0,        color: "#16a34a", bg: "#f0fdf4" },
+                    ].map((s) => (
+                      <div key={s.label} className="cp-platform-item" style={{ background: s.bg }}>
+                        <div className="cp-platform-icon" style={{ color: s.color }}>{s.icon}</div>
+                        <div className="cp-platform-val" style={{ color: s.color }}>{s.value}</div>
+                        <div className="cp-platform-label">{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
         </div>{/* end adm-content */}
       </div>{/* end adm-main */}
 
@@ -972,17 +1100,25 @@ export default function Admin() {
 
             <form className="apm-form" onSubmit={handleSaveProduct} noValidate>
 
+              {/* Server or validation error banner */}
+              {prodFormErrors._server && (
+                <div className="apm-err-banner">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  {prodFormErrors._server}
+                </div>
+              )}
+
               {/* ── Product Name ── */}
               <div className="apm-field">
                 <label className="apm-label">Product Name <span className="apm-req">*</span></label>
                 <input
-                  className="apm-input"
+                  className={`apm-input ${prodFormErrors.name ? "apm-input--err" : ""}`}
                   type="text"
                   placeholder="e.g. iPhone 14 Pro Max 256GB"
                   value={prodForm.name}
                   onChange={(e) => setProdForm((p) => ({ ...p, name: e.target.value }))}
-                  required
                 />
+                {prodFormErrors.name && <span className="apm-err-msg">{prodFormErrors.name}</span>}
               </div>
 
               {/* ── Product Category ── */}
@@ -1064,13 +1200,13 @@ export default function Admin() {
               <div className="apm-field">
                 <label className="apm-label">Additional Description <span className="apm-req">*</span></label>
                 <textarea
-                  className="apm-textarea"
+                  className={`apm-textarea ${prodFormErrors.description ? "apm-input--err" : ""}`}
                   rows={4}
                   placeholder="Describe specifications, warranty, reason for selling, any defects…"
                   value={prodForm.description}
                   onChange={(e) => setProdForm((p) => ({ ...p, description: e.target.value }))}
-                  required
                 />
+                {prodFormErrors.description && <span className="apm-err-msg">{prodFormErrors.description}</span>}
               </div>
 
               {/* ── Product Price ── */}
@@ -1079,15 +1215,15 @@ export default function Admin() {
                 <div className="apm-price-wrap">
                   <span className="apm-price-prefix">Br</span>
                   <input
-                    className="apm-input apm-input--price"
+                    className={`apm-input apm-input--price ${prodFormErrors.price ? "apm-input--err" : ""}`}
                     type="number"
                     min="1"
                     placeholder="ex: 85,000"
                     value={prodForm.price}
                     onChange={(e) => setProdForm((p) => ({ ...p, price: e.target.value }))}
-                    required
                   />
                 </div>
+                {prodFormErrors.price && <span className="apm-err-msg">{prodFormErrors.price}</span>}
               </div>
 
               {/* ── Comments / Notes row ── */}

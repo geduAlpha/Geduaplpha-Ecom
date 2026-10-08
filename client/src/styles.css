@@ -8882,3 +8882,102 @@ html.dark .co-summary-item-warn { background: rgba(249,115,22,0.1); }
 /* Business Dashboard link in header dropdown */
 .hum-item-biz { color: #7c3aed !important; }
 .hum-item-biz:hover { background: #f5f3ff !important; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN — Company Profile tab  (.cp-*)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+/* Brand card */
+.cp-brand-card { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 2rem 1.5rem; gap: 0.75rem; }
+.cp-brand-logo {
+  width: 5rem; height: 5rem; border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, var(--accent), #0ea5e9);
+  color: #fff; font-size: 2.25rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(22,163,74,0.35);
+}
+.cp-brand-name { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); }
+.cp-brand-tag  { font-size: 0.8125rem; font-weight: 600; color: var(--accent); }
+.cp-brand-desc { font-size: 0.875rem; color: var(--text-secondary); line-height: 1.6; max-width: 320px; }
+.cp-brand-stats {
+  display: flex; align-items: center; gap: 1rem;
+  background: var(--bg-input); border-radius: var(--radius-xl);
+  padding: 0.875rem 1.25rem; width: 100%; justify-content: center;
+}
+.cp-stat { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; }
+.cp-stat strong { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); }
+.cp-stat span { font-size: 0.75rem; color: var(--text-muted); }
+.cp-stat-div { width: 1px; height: 2rem; background: var(--border-card); }
+
+/* Contact info list */
+.cp-info-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.cp-info-row {
+  display: flex; align-items: center; gap: 0.875rem;
+  padding: 0.625rem 0.75rem; border-radius: var(--radius-lg);
+  background: var(--bg-input); border: 1px solid var(--border-card);
+}
+.cp-info-icon { font-size: 1.25rem; flex-shrink: 0; }
+.cp-info-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+.cp-info-value { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); margin-top: 0.1rem; }
+
+/* Gateway rows */
+.cp-gw-row {
+  display: flex; align-items: center; gap: 0.875rem;
+  padding: 0.75rem 0; border-bottom: 1px solid var(--border-card);
+}
+.cp-gw-row:last-child { border-bottom: none; }
+.cp-gw-badge {
+  font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full); white-space: nowrap;
+}
+
+/* Platform stats mini grid */
+.cp-platform-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+@media (max-width: 540px) { .cp-platform-grid { grid-template-columns: repeat(2, 1fr); } }
+.cp-platform-item {
+  border-radius: var(--radius-xl);
+  padding: 1rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+  text-align: center;
+}
+.cp-platform-icon { font-size: 1.5rem; line-height: 1; }
+.cp-platform-val  { font-size: 1.375rem; font-weight: 800; line-height: 1; }
+.cp-platform-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+
+/* ── Admin product modal — validation error styles ── */
+.apm-err-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-lg);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #b91c1c;
+}
+html.dark .apm-err-banner { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #f87171; }
+.apm-input--err { border-color: #ef4444 !important; }
+.apm-input--err:focus { box-shadow: 0 0 0 3px #fee2e2 !important; }
+.apm-err-msg {
+  font-size: 0.8rem;
+  color: #dc2626;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: -0.25rem;
+}
+.apm-err-msg::before { content: "⚠ "; }
