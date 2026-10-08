@@ -72,7 +72,8 @@ async function requireDB(req, res, next) {
 // POST /api/auth/register
 app.post("/api/auth/register", requireDB, async (req, res) => {
   try {
-    const { name = "", email = "", phone = "", password = "", role = "buyer", agreedTerms = false } = req.body;
+    const { name = "", email = "", phone = "", password = "", role = "buyer", agreedTerms = false,
+            businessName = "", businessCategory = "", businessAddress = "", businessPhone = "" } = req.body;
 
     const errs = {};
     if (!String(name).trim())                                       errs.name     = "Full name is required";
@@ -80,6 +81,7 @@ app.post("/api/auth/register", requireDB, async (req, res) => {
     if (!String(password).trim() || String(password).length < 6)   errs.password = "Password must be at least 6 characters";
     if (!["buyer","seller","business"].includes(role))              errs.role     = "Select a valid role";
     if (!agreedTerms)                                               errs.terms    = "You must agree to Terms & Conditions";
+    if (role === "business" && !String(businessName).trim())        errs.businessName = "Business name is required";
 
     if (Object.keys(errs).length) return res.status(400).json({ errors: errs });
 
@@ -95,6 +97,10 @@ app.post("/api/auth/register", requireDB, async (req, res) => {
       role,
       agreedTerms: Boolean(agreedTerms),
       verified: false,
+      businessName:     role === "business" ? String(businessName).trim() : "",
+      businessCategory: role === "business" ? String(businessCategory || "").trim() : "",
+      businessAddress:  role === "business" ? String(businessAddress  || "").trim() : "",
+      businessPhone:    role === "business" ? String(businessPhone    || phone || "").trim() : "",
     });
 
     const token = Buffer.from(JSON.stringify({ id: newUser._id, role: newUser.role, ts: Date.now() })).toString("base64");
@@ -107,6 +113,11 @@ app.post("/api/auth/register", requireDB, async (req, res) => {
         email: newUser.email,
         phone: newUser.phone,
         role: newUser.role,
+        businessName:     newUser.businessName,
+        businessCategory: newUser.businessCategory,
+        businessAddress:  newUser.businessAddress,
+        businessPhone:    newUser.businessPhone,
+        businessLogo:     newUser.businessLogo,
       },
     });
   } catch (err) {
@@ -143,6 +154,11 @@ app.post("/api/auth/login", requireDB, async (req, res) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        businessName:     user.businessName     || "",
+        businessCategory: user.businessCategory || "",
+        businessAddress:  user.businessAddress  || "",
+        businessPhone:    user.businessPhone     || "",
+        businessLogo:     user.businessLogo      || null,
       },
     });
   } catch (err) {
@@ -169,6 +185,134 @@ app.get("/api/auth/me", requireDB, async (req, res) => {
     res.json({ user: { id: _id, ...rest } });
   } catch (err) {
     res.status(500).json({ error: "Auth check failed: " + err.message });
+  }
+});
+
+// ─── Business Dashboard Routes ───────────────────────────────────────────────
+
+/** Decode Bearer token → userId (shared by all /api/business/* routes) */
+function getBizUserId(req) {
+  const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  if (!token) return null;
+  try { return JSON.parse(Buffer.from(token, "base64").toString("utf8")).id || null; }
+  catch { return null; }
+}
+
+// GET /api/business/dashboard — KPIs + recent orders + top products for this business
+app.get("/api/business/dashboard", requireDB, async (req, res) => {
+  const userId = getBizUserId(req);
+  if (!userId) return res.status(401).json({ error: "Authentication required." });
+  try {
+    const user = await User.findById(userId).lean();
+    if (!user || user.role !== "business") return res.status(403).json({ error: "Business account required." });
+
+    const myProducts = await Product.find({ ownerId: userId }).lean();
+    const productIds = myProducts.map((p) => p._id);
+
+    // Orders that contain at least one of this business's products
+    const allOrders = productIds.length
+      ? await Order.find({ "items.productId": { $in: productIds } }).sort({ createdAt: -1 }).lean()
+      : [];
+
+    const totalRevenue = allOrders
+      .filter((o) => o.status !== "cancelled")
+      .reduce((sum, o) => {
+        const mine = (o.items || [])
+          .filter((it) => productIds.includes(it.productId))
+          .reduce((s, it) => s + it.price * it.qty, 0);
+        return sum + mine;
+      }, 0);
+
+    const totalOrders = allOrders.length;
+    const totalViews  = myProducts.reduce((s, p) => s + (p.views || 0), 0);
+
+    const statusCounts = { pending:0, paid:0, processing:0, shipped:0, delivered:0, cancelled:0 };
+    allOrders.forEach((o) => { if (statusCounts[o.status] !== undefined) statusCounts[o.status]++; });
+
+    // Top products by views
+    const topProducts = [...myProducts].sort((a, b) => (b.views||0) - (a.views||0)).slice(0, 6)
+      .map(({ _id, name, category, price, views, stock, featured, image, art, color, tint }) =>
+        ({ id: _id, name, category, price, views: views||0, stock, featured, image, art, color, tint }));
+
+    res.json({
+      profile: {
+        id: userId, name: user.name, email: user.email,
+        businessName: user.businessName || user.name,
+        businessCategory: user.businessCategory || "",
+        businessAddress: user.businessAddress || "",
+        businessPhone: user.businessPhone || user.phone || "",
+        businessLogo: user.businessLogo || null,
+        verified: user.verified,
+      },
+      stats: { totalRevenue, totalOrders, totalProducts: myProducts.length, totalViews },
+      statusCounts,
+      recentOrders: allOrders.slice(0, 10).map(({ _id, __v, ...rest }) => ({ id: _id, ...rest })),
+      topProducts,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Dashboard error: " + err.message });
+  }
+});
+
+// GET /api/business/orders — paginated orders for this business
+app.get("/api/business/orders", requireDB, async (req, res) => {
+  const userId = getBizUserId(req);
+  if (!userId) return res.status(401).json({ error: "Authentication required." });
+  try {
+    const user = await User.findById(userId).lean();
+    if (!user || user.role !== "business") return res.status(403).json({ error: "Business account required." });
+
+    const myProducts = await Product.find({ ownerId: userId }, { _id: 1 }).lean();
+    const productIds = myProducts.map((p) => p._id);
+    const { page = "1", limit = "20", status = "all" } = req.query;
+    const filter = { "items.productId": { $in: productIds } };
+    if (status && status !== "all") filter.status = status;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const size    = Math.min(50, Math.max(1, parseInt(limit, 10) || 20));
+    const [total, docs] = await Promise.all([
+      Order.countDocuments(filter),
+      Order.find(filter).sort({ createdAt: -1 }).skip((pageNum - 1) * size).limit(size).lean(),
+    ]);
+
+    res.json({
+      total, page: pageNum,
+      pages: Math.max(1, Math.ceil(total / size)),
+      orders: docs.map(({ _id, __v, ...rest }) => ({ id: _id, ...rest })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Orders error: " + err.message });
+  }
+});
+
+// PUT /api/business/profile — update business profile info
+app.put("/api/business/profile", requireDB, async (req, res) => {
+  const userId = getBizUserId(req);
+  if (!userId) return res.status(401).json({ error: "Authentication required." });
+  try {
+    const user = await User.findById(userId).lean();
+    if (!user || user.role !== "business") return res.status(403).json({ error: "Business account required." });
+
+    const { businessName, businessCategory, businessAddress, businessPhone, businessLogo, name, phone } = req.body;
+    const update = {};
+    if (businessName     !== undefined) update.businessName     = String(businessName).trim();
+    if (businessCategory !== undefined) update.businessCategory = String(businessCategory).trim();
+    if (businessAddress  !== undefined) update.businessAddress  = String(businessAddress).trim();
+    if (businessPhone    !== undefined) update.businessPhone    = String(businessPhone).trim();
+    if (name             !== undefined) update.name             = String(name).trim();
+    if (phone            !== undefined) update.phone            = String(phone).trim();
+    if (businessLogo !== undefined) {
+      if (businessLogo && String(businessLogo).length > 500 * 1024) {
+        return res.status(400).json({ error: "Logo image too large. Use a smaller image." });
+      }
+      update.businessLogo = businessLogo || null;
+    }
+
+    const updated = await User.findByIdAndUpdate(userId, update, { new: true }).lean();
+    const { _id, __v, password: _pw, ...rest } = updated;
+    res.json({ user: { id: _id, ...rest } });
+  } catch (err) {
+    res.status(500).json({ error: "Profile update error: " + err.message });
   }
 });
 

@@ -10,9 +10,15 @@ const userSchema = new mongoose.Schema(
     // password stored as SHA-256 hex (no bcrypt dependency required)
     password: { type: String, required: true },
     role:     { type: String, enum: ["buyer", "seller", "business"], default: "buyer" },
-    avatar:   { type: String, default: null },   // initials fallback used if null
+    avatar:   { type: String, default: null },
     verified: { type: Boolean, default: false },
     agreedTerms: { type: Boolean, default: false },
+    // Business-only profile fields
+    businessName:     { type: String, default: "" },
+    businessCategory: { type: String, default: "" },
+    businessAddress:  { type: String, default: "" },
+    businessPhone:    { type: String, default: "" },
+    businessLogo:     { type: String, default: null }, // base64 or URL
   },
   {
     timestamps: true,

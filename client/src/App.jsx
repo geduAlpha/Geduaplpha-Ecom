@@ -12,6 +12,7 @@ import Sell from "./pages/Sell.jsx";
 import Admin from "./pages/Admin.jsx";
 import MyOrders from "./pages/MyOrders.jsx";
 import MyListings from "./pages/MyListings.jsx";
+import BusinessDashboard from "./pages/BusinessDashboard.jsx";
 
 function NotFound() {
   return (
@@ -24,7 +25,12 @@ function NotFound() {
   );
 }
 
-/* Buyers are redirected to / — only seller/business (or guests) can access /sell */
+/* Only business role can access /business-dashboard */
+function BusinessRoute({ children }) {
+  const { user } = useUser();
+  if (!user || user.role !== "business") return <Navigate to="/" replace />;
+  return children;
+}
 function SellerRoute({ children }) {
   const { user } = useUser();
   if (user && user.role === "buyer") {
@@ -50,6 +56,7 @@ export default function App() {
           <Route path="/sell" element={<SellerRoute><Sell /></SellerRoute>} />
           <Route path="/my-orders" element={<MyOrders />} />
           <Route path="/my-listings" element={<MyListings />} />
+          <Route path="/business-dashboard" element={<BusinessRoute><BusinessDashboard /></BusinessRoute>} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />

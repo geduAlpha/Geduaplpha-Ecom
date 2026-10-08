@@ -49,9 +49,9 @@ export function setAdminAuth(val) {
 
 /* Role badge colours */
 const ROLE_META = {
-  buyer:    { label: "Buyer",    color: "#2563eb", bg: "#eff6ff", icon: "ðŸ›’" },
-  seller:   { label: "Seller",   color: "#16a34a", bg: "#f0fdf4", icon: "ðŸª" },
-  business: { label: "Business", color: "#7c3aed", bg: "#f5f3ff", icon: "ðŸ¢" },
+  buyer:    { label: "Buyer",    color: "#2563eb", bg: "#eff6ff", icon: "B" },
+  seller:   { label: "Seller",   color: "#16a34a", bg: "#f0fdf4", icon: "S" },
+  business: { label: "Business", color: "#7c3aed", bg: "#f5f3ff", icon: "Co" },
 };
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
@@ -184,6 +184,12 @@ export default function Header() {
                         </div>
                       </div>
                       <div className="hdr-user-menu-items">
+                        {user.role === "business" && (
+                          <Link to="/business-dashboard" className="hum-item hum-item-biz" onClick={() => setUserMenuOpen(false)}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                            Business Dashboard
+                          </Link>
+                        )}
                         {user.role !== "buyer" && (
                           <Link to="/my-listings" className="hum-item" onClick={() => setUserMenuOpen(false)}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -360,6 +366,11 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
   const [agreed,        setAgreed]        = useState(false);
   const [signupErrors,  setSignupErrors]  = useState({});
   const [signupLoading, setSignupLoading] = useState(false);
+  // Business-specific fields (step 3)
+  const [bizName,     setBizName]     = useState("");
+  const [bizCategory, setBizCategory] = useState("");
+  const [bizAddress,  setBizAddress]  = useState("");
+  const [bizPhone,    setBizPhone]    = useState("");
 
   const now = new Date();
   const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -383,12 +394,17 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
     if (password.length < 6)    errs.password  = "Password must be at least 6 characters";
     if (password !== confirmPw) errs.confirmPw = "Passwords do not match";
     if (!agreed)                errs.terms     = "You must agree to the Terms and Conditions";
+    if (role === "business" && !bizName.trim()) errs.bizName = "Business name is required";
     if (Object.keys(errs).length) { setSignupErrors(errs); return; }
     setSignupLoading(true);
     try {
       const res = await api.authRegister({
         name: `${firstName.trim()} ${lastName.trim()}`.trim(),
         email, phone, password, role, agreedTerms: agreed,
+        businessName: bizName.trim(),
+        businessCategory: bizCategory.trim(),
+        businessAddress: bizAddress.trim(),
+        businessPhone: bizPhone.trim() || phone,
       });
       onLogin(res.token, res.user);
     } catch (err) { setSignupErrors(err.errors || { form: err.message }); }
@@ -559,7 +575,23 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
                   </div>
                 </div>
 
-                <form onSubmit={handleSignup} className="sp-form" noValidate>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  if (role === "business") {
+                    // Validate step 2 fields first, then go to step 3
+                    const errs = {};
+                    if (!firstName.trim())      errs.firstName = "First name is required";
+                    if (!email.trim())          errs.email     = "Email address is required";
+                    if (password.length < 6)    errs.password  = "Password must be at least 6 characters";
+                    if (password !== confirmPw) errs.confirmPw = "Passwords do not match";
+                    if (!agreed)                errs.terms     = "You must agree to the Terms and Conditions";
+                    if (Object.keys(errs).length) { setSignupErrors(errs); return; }
+                    setSignupErrors({});
+                    setSignupStep(3);
+                  } else {
+                    handleSignup(e);
+                  }
+                }} className="sp-form" noValidate>
                   {signupErrors.form && (
                     <div className="sp-err-banner">Warning: {signupErrors.form}</div>
                   )}
@@ -640,7 +672,81 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
 
                   <button type="submit" className="sp-submit" disabled={signupLoading}
                     style={selectedRole ? { background: selectedRole.color } : {}}>
-                    {signupLoading ? <span className="sp-spinner" /> : "Create Account"}
+                    {signupLoading ? <span className="sp-spinner" /> :
+                      role === "business" ? "Next: Business Info" : "Create Account"}
+                  </button>
+                </form>
+
+                <p className="sp-switch-line">
+                  Already a member?{" "}
+                  <button className="sp-switch-btn" onClick={() => setMode("login")}>Sign In</button>
+                </p>
+              </div>
+            )}
+
+            {/* ── SIGN UP step 3: Business info (business role only) ── */}
+            {mode === "signup" && signupStep === 3 && role === "business" && (
+              <div className="sp-view">
+                <button className="auth-back-btn" style={{ alignSelf:"flex-start", background:"none", border:"none", color:"var(--text-secondary)", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:"0.875rem" }}
+                  onClick={() => setSignupStep(2)}>
+                  Back
+                </button>
+
+                <div className="sp-setup-header">
+                  <div className="sp-hero-avatar" style={{ background: "#f5f3ff", color: "#7c3aed", width: 52, height: 52, boxShadow: "none", fontSize: "1.5rem" }}>
+                    Co
+                  </div>
+                  <div>
+                    <h2 className="sp-heading" style={{ marginBottom: 0, fontSize: "1.2rem" }}>Business Info</h2>
+                    <p className="sp-subtext" style={{ marginTop: "0.2rem" }}>Tell us about your business</p>
+                  </div>
+                </div>
+
+                <form onSubmit={(e) => { e.preventDefault(); handleSignup(e); }} className="sp-form" noValidate>
+                  {signupErrors.form && <div className="sp-err-banner">Warning: {signupErrors.form}</div>}
+
+                  <div className="sp-field">
+                    <div className="sp-field-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="15" height="15"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                    </div>
+                    <input className={`sp-input ${signupErrors.bizName ? "sp-input--err" : ""}`}
+                      type="text" placeholder="Business name *"
+                      value={bizName} onChange={(e) => setBizName(e.target.value)} autoFocus />
+                  </div>
+                  {signupErrors.bizName && <span className="sp-err">{signupErrors.bizName}</span>}
+
+                  <div className="sp-field">
+                    <div className="sp-field-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="15" height="15"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                    </div>
+                    <select className="sp-input" style={{ appearance:"none" }}
+                      value={bizCategory} onChange={(e) => setBizCategory(e.target.value)}>
+                      <option value="">Select business category</option>
+                      {["Electronics","Vehicles","Real Estate","Fashion","Furniture","Stationery","Services","Food & Beverage","Health & Beauty","Other"].map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="sp-field">
+                    <div className="sp-field-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="15" height="15"><path d="M12 21s-6-5.2-6-10.2a6 6 0 1 1 12 0C18 15.8 12 21 12 21Z"/><circle cx="12" cy="10" r="2"/></svg>
+                    </div>
+                    <input className="sp-input" type="text" placeholder="Business address (City, Subcity)"
+                      value={bizAddress} onChange={(e) => setBizAddress(e.target.value)} />
+                  </div>
+
+                  <div className="sp-field">
+                    <div className="sp-field-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="15" height="15"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.61 4.9 2 2 0 0 1 3.6 2.69h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </div>
+                    <input className="sp-input" type="tel" placeholder="Business phone (+251...)"
+                      value={bizPhone} onChange={(e) => setBizPhone(e.target.value)} />
+                  </div>
+
+                  <button type="submit" className="sp-submit" disabled={signupLoading}
+                    style={{ background: "#7c3aed" }}>
+                    {signupLoading ? <span className="sp-spinner" /> : "Create Business Account"}
                   </button>
                 </form>
 

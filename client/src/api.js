@@ -87,4 +87,26 @@ export const api = {
   adminUpdateOrder: (id, body) => request(`/admin/orders/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   adminConfirmPayment: (id) => request(`/admin/orders/${id}`, { method: "PUT", body: JSON.stringify({ confirmPayment: true }) }),
   adminDeleteOrder: (id) => request(`/admin/orders/${id}`, { method: "DELETE" }),
+
+  // Business dashboard APIs (token passed via Authorization header)
+  businessDashboard: (token, signal) =>
+    fetch("/api/business/dashboard", {
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      signal,
+    }).then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; }),
+
+  businessOrders: (token, params, signal) => {
+    const q = new URLSearchParams(Object.fromEntries(Object.entries(params || {}).filter(([,v]) => v)));
+    return fetch(`/api/business/orders?${q}`, {
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      signal,
+    }).then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; });
+  },
+
+  updateBusinessProfile: (token, body) =>
+    fetch("/api/business/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    }).then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; }),
 };
