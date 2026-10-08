@@ -46,6 +46,7 @@ const productSchema = new mongoose.Schema(
     image: { type: String, default: null },
     views: { type: Number, default: 0 },
     featured: { type: Boolean, default: false },
+    ownerId: { type: String, default: null }, // User._id of the seller who posted it
   },
   { timestamps: true, toJSON }
 );

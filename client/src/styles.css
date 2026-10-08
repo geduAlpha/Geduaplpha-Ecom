@@ -8699,3 +8699,102 @@ html.dark .co-summary-item-warn { background: rgba(249,115,22,0.1); }
   margin-left: 0.375rem;
   vertical-align: middle;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MY LISTINGS PAGE  (.ml-*)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.ml-page { padding-top: 2rem; padding-bottom: 4rem; }
+.ml-page-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem;
+}
+.ml-page-head h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; }
+.ml-page-head p  { font-size: 0.9375rem; color: var(--text-secondary); margin-top: 0.2rem; }
+
+/* Gate screens */
+.ml-gate { min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+.ml-gate-card {
+  background: var(--bg-card); border: 1px solid var(--border-card);
+  border-radius: var(--radius-2xl); padding: 2.5rem 2rem;
+  max-width: 420px; width: 100%; text-align: center; box-shadow: var(--shadow-md);
+}
+.ml-gate-icon { font-size: 3rem; margin-bottom: 1rem; }
+.ml-gate-card h2 { font-size: 1.375rem; font-weight: 800; margin-bottom: 0.5rem; }
+.ml-gate-card p  { color: var(--text-secondary); margin-bottom: 1.5rem; }
+.ml-gate-card .btn { display: block; }
+
+/* Listing grid */
+.ml-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+@media (max-width: 640px) { .ml-grid { grid-template-columns: 1fr; } }
+
+/* Listing card */
+.ml-card {
+  background: var(--bg-card); border: 1.5px solid var(--border-card);
+  border-radius: var(--radius-2xl); overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition), box-shadow var(--transition);
+  display: flex; flex-direction: column;
+}
+.ml-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+
+/* Thumbnail */
+.ml-card-thumb {
+  position: relative; aspect-ratio: 16/9; overflow: hidden;
+  background: var(--bg-input);
+}
+.ml-card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Status pill on thumb */
+.ml-status {
+  position: absolute; top: 0.625rem; right: 0.625rem;
+  font-size: 0.6875rem; font-weight: 700;
+  padding: 0.2rem 0.55rem; border-radius: var(--radius-full);
+}
+.ml-status--ok       { background: #f0fdf4; color: #16a34a; }
+.ml-status--low      { background: #fefce8; color: #a16207; }
+.ml-status--out      { background: #fef2f2; color: #dc2626; }
+.ml-status--featured { background: #fef08a; color: #854d0e; }
+
+/* Card body */
+.ml-card-body { padding: 1rem 1rem 0.5rem; flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+.ml-card-cat  { font-size: 0.75rem; font-weight: 700; text-transform: capitalize; color: var(--accent); }
+.ml-card-name { font-size: 0.9375rem; font-weight: 700; }
+.ml-card-name a { color: var(--text-primary); text-decoration: none; }
+.ml-card-name a:hover { color: var(--accent); }
+.ml-card-price { font-size: 1rem; font-weight: 800; color: var(--text-primary); }
+.ml-card-meta {
+  display: flex; gap: 0.875rem; flex-wrap: wrap;
+  font-size: 0.75rem; color: var(--text-muted); margin-top: 0.125rem;
+}
+
+/* Card actions */
+.ml-card-actions {
+  display: flex; gap: 0.5rem;
+  padding: 0.75rem 1rem 1rem;
+  border-top: 1px solid var(--border-card);
+  margin-top: auto;
+}
+.ml-btn-edit {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+  padding: 0.5rem; border-radius: var(--radius-lg);
+  background: var(--bg-input); border: 1px solid var(--border-card);
+  color: var(--text-primary); font-size: 0.8125rem; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  transition: background var(--transition), color var(--transition);
+}
+.ml-btn-edit:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ml-btn-del {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+  padding: 0.5rem; border-radius: var(--radius-lg);
+  background: #fef2f2; border: 1px solid #fecaca;
+  color: #dc2626; font-size: 0.8125rem; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  transition: background var(--transition);
+}
+.ml-btn-del:hover { background: #dc2626; color: #fff; border-color: #dc2626; }

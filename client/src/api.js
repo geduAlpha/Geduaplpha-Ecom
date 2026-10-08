@@ -32,6 +32,19 @@ export const api = {
   postingPlans: (signal) => request("/posting-plans", { signal }),
   submitListing: (body) => request("/listing-payment", { method: "POST", body: JSON.stringify(body) }),
 
+  // Seller: own listing management
+  getMyListings: (userId, token, signal) =>
+    fetch(`/api/products/my/${userId}`, {
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      signal,
+    }).then(async (r) => {
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw Object.assign(new Error(d.error || `Server error (HTTP ${r.status})`), { status: r.status });
+      return d;
+    }),
+  updateMyProduct: (id, body) => request(`/products/${id}`, { method: "PUT",    body: JSON.stringify(body) }),
+  deleteMyProduct: (id, ownerId) => request(`/products/${id}`, { method: "DELETE", body: JSON.stringify({ ownerId }) }),
+
   // User auth
   authRegister: (body)  => request("/auth/register", { method: "POST", body: JSON.stringify(body) }),
   authLogin:    (body)  => request("/auth/login",    { method: "POST", body: JSON.stringify(body) }),

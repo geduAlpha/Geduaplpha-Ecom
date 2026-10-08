@@ -11,6 +11,7 @@ import Checkout from "./pages/Checkout.jsx";
 import Sell from "./pages/Sell.jsx";
 import Admin from "./pages/Admin.jsx";
 import MyOrders from "./pages/MyOrders.jsx";
+import MyListings from "./pages/MyListings.jsx";
 
 function NotFound() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/product/:id" element={<Product />} />
           <Route path="/sell" element={<SellerRoute><Sell /></SellerRoute>} />
           <Route path="/my-orders" element={<MyOrders />} />
+          <Route path="/my-listings" element={<MyListings />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />

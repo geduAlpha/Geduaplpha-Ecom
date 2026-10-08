@@ -174,6 +174,7 @@ export default function Sell() {
     try {
       const result = await api.submitListing({
         plan: plan.key, paymentMethod: gw, paymentRef: ref, sellerPhone: formData.sellerPhone,
+        ownerId: user?.id || null,
         product: {
           name: formData.name, category: formData.category, price: Number(formData.price),
           negotiable: formData.negotiable, condition: formData.condition, description: formData.description,
@@ -183,7 +184,7 @@ export default function Sell() {
         },
       });
       setGateStep("success");
-      setTimeout(() => navigate(`/product/${result.id}`), 2400);
+      setTimeout(() => navigate(user ? "/my-listings" : `/product/${result.id}`), 2400);
     } catch (err) {
       setSubmitError(err.message || "Submission failed. Please try again.");
       setGateStep(plan.price === 0 ? "plans" : "pay");

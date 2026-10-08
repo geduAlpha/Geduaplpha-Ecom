@@ -185,9 +185,15 @@ export default function Header() {
                       </div>
                       <div className="hdr-user-menu-items">
                         {user.role !== "buyer" && (
-                          <Link to="/sell" className="hum-item" onClick={() => setUserMenuOpen(false)}>ðŸª My Listings</Link>
+                          <Link to="/my-listings" className="hum-item" onClick={() => setUserMenuOpen(false)}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                            My Listings
+                          </Link>
                         )}
-                        <Link to="/my-orders" className="hum-item" onClick={() => setUserMenuOpen(false)}>ðŸ“¦ My Orders</Link>
+                        <Link to="/my-orders" className="hum-item" onClick={() => setUserMenuOpen(false)}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                          My Orders
+                        </Link>
                         <button className="hum-item hum-item-danger" onClick={handleUserLogout}><LogoutIcon /> Sign Out</button>
                       </div>
                     </div>

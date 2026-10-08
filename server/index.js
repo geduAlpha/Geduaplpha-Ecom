@@ -304,6 +304,62 @@ app.get("/api/products", requireDB, async (req, res) => {
   }
 });
 
+// ─── Seller: own listings (must be BEFORE /api/products/:id) ────────────────
+app.get("/api/products/my/:userId", requireDB, async (req, res) => {
+  try {
+    const docs = await Product.find({ ownerId: req.params.userId })
+      .sort({ createdAt: -1 })
+      .lean();
+    const items = docs.map(({ _id, __v, ...rest }) => ({ id: _id, ...rest }));
+    res.json({ items, total: items.length });
+  } catch (err) {
+    res.status(500).json({ error: "DB Error: " + err.message });
+  }
+});
+
+// PUT /api/products/:id — owner-only update
+app.put("/api/products/:id", requireDB, async (req, res) => {
+  try {
+    const { ownerId, ...updateData } = req.body;
+    // Verify ownership via ownerId sent by client (simple check — no JWT required)
+    const existing = await Product.findById(req.params.id).lean();
+    if (!existing) return res.status(404).json({ error: "Product not found" });
+    if (!ownerId || existing.ownerId !== String(ownerId)) {
+      return res.status(403).json({ error: "You can only edit your own listings." });
+    }
+    // Image size guard
+    if (updateData.image && String(updateData.image).length > 800 * 1024) {
+      return res.status(400).json({ error: "Image is too large. Use a smaller photo." });
+    }
+    delete updateData._id; delete updateData.id; delete updateData.__v;
+    if (updateData.price !== undefined) updateData.price = Number(updateData.price);
+    if (updateData.stock !== undefined) updateData.stock = Math.max(0, parseInt(updateData.stock, 10) || 0);
+    if (updateData.negotiable !== undefined) updateData.negotiable = Boolean(updateData.negotiable);
+
+    const doc = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true }).lean();
+    const { _id, __v, ...rest } = doc;
+    res.json({ id: _id, ...rest });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update: " + err.message });
+  }
+});
+
+// DELETE /api/products/:id — owner-only delete
+app.delete("/api/products/:id", requireDB, async (req, res) => {
+  try {
+    const { ownerId } = req.body || {};
+    const existing = await Product.findById(req.params.id).lean();
+    if (!existing) return res.status(404).json({ error: "Product not found" });
+    if (!ownerId || existing.ownerId !== String(ownerId)) {
+      return res.status(403).json({ error: "You can only delete your own listings." });
+    }
+    await Product.findByIdAndDelete(req.params.id);
+    res.json({ status: "deleted", id: req.params.id });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete: " + err.message });
+  }
+});
+
 // ─── Product Detail & View Counter ───────────────────────────────────────────
 app.get("/api/products/:id", requireDB, async (req, res) => {
   try {
@@ -340,6 +396,7 @@ app.post("/api/listing-payment", requireDB, async (req, res) => {
       paymentMethod = "telebirr",
       paymentRef = "",
       sellerPhone = "",
+      ownerId = null,
       product: productData = {},
     } = req.body;
 
@@ -411,6 +468,7 @@ app.post("/api/listing-payment", requireDB, async (req, res) => {
       },
       views: 0,
       featured: plan.featured,
+      ownerId: ownerId || null,
     });
 
     // Record the payment
@@ -455,7 +513,8 @@ app.post("/api/products", requireDB, async (req, res) => {
       color = "#2563EB",
       tint = "#EFF6FF",
       location = {},
-      seller = {}
+      seller = {},
+      ownerId = null
     } = req.body;
 
     const errors = {};
@@ -505,6 +564,7 @@ app.post("/api/products", requireDB, async (req, res) => {
       },
       views: 1,
       featured: false,
+      ownerId: ownerId || null,
     });
 
     const { _id, __v, ...rest } = newProduct.toObject();
