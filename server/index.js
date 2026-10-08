@@ -53,6 +53,20 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Serve built React frontend
 app.use(express.static(CLIENT_DIST));
 
+// ─── DB-ready middleware — defined here so it's available for all routes ──────
+async function requireDB(req, res, next) {
+  const state = mongoose.connection.readyState;
+  if (state === 0 || state === 3) {
+    try { await connectDB(); } catch (e) {
+      return res.status(503).json({ error: "Database unavailable, please retry in a moment." });
+    }
+  }
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ error: "Database is connecting, please retry in a moment." });
+  }
+  next();
+}
+
 // ─── User Auth ───────────────────────────────────────────────────────────────
 
 // POST /api/auth/register
@@ -97,6 +111,10 @@ app.post("/api/auth/register", requireDB, async (req, res) => {
     });
   } catch (err) {
     console.error("Register error:", err.message);
+    // MongoDB duplicate key (e.g. email unique constraint race condition)
+    if (err.code === 11000 || String(err.message).includes("duplicate key") || String(err.message).includes("E11000")) {
+      return res.status(409).json({ errors: { email: "An account with this email already exists." } });
+    }
     res.status(500).json({ error: "Registration failed: " + err.message });
   }
 });
@@ -187,24 +205,6 @@ app.get("/api/categories", requireDB, async (_req, res) => {
     res.json({ categories: CATEGORIES });
   }
 });
-
-// ─── DB-ready middleware for all data routes ─────────────────────────────────
-async function requireDB(req, res, next) {
-  const state = mongoose.connection.readyState;
-  // 1 = connected, 2 = connecting
-  if (state === 0 || state === 3) {
-    // disconnected or disconnecting — try to reconnect
-    try {
-      await connectDB();
-    } catch (e) {
-      return res.status(503).json({ error: "Database unavailable, please retry in a moment." });
-    }
-  }
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({ error: "Database is connecting, please retry in a moment." });
-  }
-  next();
-}
 
 // ─── Marketplace Catalogue ───────────────────────────────────────────────────
 app.get("/api/products", requireDB, async (req, res) => {
