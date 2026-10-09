@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useState } from "react";
 
 const CartContext = createContext(null);
-const STORAGE_KEY = "marigold-cart-v1";
+const STORAGE_KEY = "gedualpha-commerce-cart-v1";
 const MAX_QTY = 20;
 
 function load() {

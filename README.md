@@ -1,4 +1,4 @@
-# Marigold Supply — React + Node.js + MongoDB
+# Gedualpha Commerce — React + Node.js + MongoDB
 
 A full-stack e-commerce app: React storefront (Vite) + Node.js/Express API + MongoDB (Mongoose).
 
@@ -113,7 +113,7 @@ The Vite dev server proxies `/api` to the Node server automatically.
 
 - **Colors & fonts:** `client/src/styles.css` CSS variables
 - **Products:** edit seeds in `server/database/seed.js` (prices in cents)
-- **Store name:** search & replace "Marigold Supply"
+- **Store name:** search & replace "Gedualpha Commerce"
 
 ## Next steps
 

@@ -1347,7 +1347,7 @@ app.get("*", (_req, res) => {
   const indexHtml = path.join(CLIENT_DIST, "index.html");
   res.sendFile(indexHtml, (err) => {
     if (err && !res.headersSent) {
-      res.status(200).send("Marigold Supply Store is running. Please refresh shortly.");
+      res.status(200).send("Gedualpha Commerce is running. Please refresh shortly.");
     }
   });
 });
