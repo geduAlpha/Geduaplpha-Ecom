@@ -379,19 +379,29 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
     e.preventDefault(); setLoginErrors({});
     if (!loginEmail || !loginPw) { setLoginErrors({ form: "Email and password are required." }); return; }
     setLoginLoading(true);
-    try {
-      const res = await api.authLogin({ email: loginEmail, password: loginPw });
-      onLogin(res.token, res.user);
-    } catch (err) {
-      const msg = err.message || "";
-      // Friendly message for DB cold-start / 503 errors
-      if (err.status === 503 || msg.toLowerCase().includes("database") || msg.toLowerCase().includes("unavailable")) {
-        setLoginErrors({ form: "The server is warming up. Please wait a moment and try again." });
-      } else {
-        setLoginErrors(err.errors || { form: msg });
+
+    // Retry up to 6 times with 5s gap to handle Atlas cold-start 503s
+    let lastErr = null;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      try {
+        const res = await api.authLogin({ email: loginEmail, password: loginPw });
+        onLogin(res.token, res.user);
+        return;
+      } catch (err) {
+        lastErr = err;
+        const is503 = err.status === 503 || (err.message || "").toLowerCase().includes("reconnect") || (err.message || "").toLowerCase().includes("database");
+        if (!is503 || attempt === 5) break;
+        // Show "warming up" message and wait before retry
+        setLoginErrors({ form: `Server is warming up… retrying (${attempt + 1}/5)` });
+        await new Promise((r) => setTimeout(r, 5000));
+        setLoginErrors({});
       }
     }
-    finally { setLoginLoading(false); }
+    // All retries exhausted — show final error
+    const msg = lastErr?.message || "Something went wrong.";
+    const is503 = lastErr?.status === 503 || msg.toLowerCase().includes("reconnect") || msg.toLowerCase().includes("database");
+    setLoginErrors(lastErr?.errors || { form: is503 ? "The database is still starting up. Please try again in a moment." : msg });
+    setLoginLoading(false);
   }
 
   async function handleSignup(e) {
@@ -405,25 +415,32 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
     if (role === "business" && !bizName.trim()) errs.bizName = "Business name is required";
     if (Object.keys(errs).length) { setSignupErrors(errs); return; }
     setSignupLoading(true);
-    try {
-      const res = await api.authRegister({
-        name: `${firstName.trim()} ${lastName.trim()}`.trim(),
-        email, phone, password, role, agreedTerms: agreed,
-        businessName: bizName.trim(),
-        businessCategory: bizCategory.trim(),
-        businessAddress: bizAddress.trim(),
-        businessPhone: bizPhone.trim() || phone,
-      });
-      onLogin(res.token, res.user);
-    } catch (err) {
-      const msg = err.message || "";
-      if (err.status === 503 || msg.toLowerCase().includes("database") || msg.toLowerCase().includes("unavailable")) {
-        setSignupErrors({ form: "The server is warming up. Please wait a moment and try again." });
-      } else {
-        setSignupErrors(err.errors || { form: msg });
+    let lastErr = null;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      try {
+        const res = await api.authRegister({
+          name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+          email, phone, password, role, agreedTerms: agreed,
+          businessName: bizName.trim(),
+          businessCategory: bizCategory.trim(),
+          businessAddress: bizAddress.trim(),
+          businessPhone: bizPhone.trim() || phone,
+        });
+        onLogin(res.token, res.user);
+        return;
+      } catch (err) {
+        lastErr = err;
+        const is503 = err.status === 503 || (err.message || "").toLowerCase().includes("reconnect") || (err.message || "").toLowerCase().includes("database");
+        if (!is503 || attempt === 5) break;
+        setSignupErrors({ form: `Server is warming up… retrying (${attempt + 1}/5)` });
+        await new Promise((r) => setTimeout(r, 5000));
+        setSignupErrors({});
       }
     }
-    finally { setSignupLoading(false); }
+    const msg = lastErr?.message || "Something went wrong.";
+    const is503 = lastErr?.status === 503 || msg.toLowerCase().includes("reconnect") || msg.toLowerCase().includes("database");
+    setSignupErrors(lastErr?.errors || { form: is503 ? "The database is still starting up. Please try again in a moment." : msg });
+    setSignupLoading(false);
   }
 
   const selectedRole = ROLES.find((r) => r.key === role);

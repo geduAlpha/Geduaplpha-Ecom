@@ -53,35 +53,45 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Serve built React frontend
 app.use(express.static(CLIENT_DIST));
 
-// ─── DB-ready middleware — defined here so it's available for all routes ──────
-async function requireDB(req, res, next) {
-  const state = mongoose.connection.readyState;
-  // 1 = connected — fast path
-  if (state === 1) return next();
+// ─── Background reconnect state ──────────────────────────────────────────────
+let _reconnecting = false;
 
-  // 2 = still connecting — wait up to 30s for it to become ready
-  if (state === 2) {
-    const deadline = Date.now() + 30000;
-    while (Date.now() < deadline) {
-      await new Promise((r) => setTimeout(r, 500));
-      if (mongoose.connection.readyState === 1) return next();
-    }
-    return res.status(503).json({ error: "Database is taking longer than expected. Please retry in a moment." });
-  }
-
-  // 0 = never connected, 3 = disconnecting — try to reconnect with retries
+async function ensureConnected() {
+  if (_reconnecting) return;
+  if (mongoose.connection.readyState === 1) return;
+  _reconnecting = true;
+  console.log("MongoDB: background reconnect starting…");
   let attempts = 0;
-  while (attempts < 4) {
+  while (attempts < 10 && mongoose.connection.readyState !== 1) {
     attempts++;
     try {
       await connectDB();
-      return next();
+      console.log("MongoDB: reconnected successfully on attempt", attempts);
+      _reconnecting = false;
+      return;
     } catch (e) {
-      console.error(`requireDB reconnect attempt ${attempts}/4 failed:`, e.message);
-      if (attempts < 4) await new Promise((r) => setTimeout(r, 3000));
+      console.warn(`MongoDB: reconnect attempt ${attempts}/10 failed:`, e.message);
+      await new Promise((r) => setTimeout(r, 8000));
     }
   }
-  return res.status(503).json({ error: "Could not reach the database. Please try again in a few seconds." });
+  _reconnecting = false;
+  console.error("MongoDB: all reconnect attempts exhausted");
+}
+
+// ─── DB-ready middleware — non-blocking, triggers background reconnect ────────
+function requireDB(req, res, next) {
+  const state = mongoose.connection.readyState;
+
+  // 1 = connected — fast path, no overhead
+  if (state === 1) return next();
+
+  // Not connected — kick off a background reconnect and return 503 immediately
+  // so the request doesn't hang for minutes. Client will retry.
+  ensureConnected(); // fire-and-forget
+  return res.status(503).json({
+    error: "Database is reconnecting — please retry in a few seconds.",
+    retryAfter: 5,
+  });
 }
 
 // ─── User Auth ───────────────────────────────────────────────────────────────
@@ -1377,28 +1387,15 @@ process.on("unhandledRejection", (reason) => {
   console.error("Unhandled rejection:", reason);
 });
 
-// ─── Start server: connect to MongoDB first, then begin accepting requests ────
+// ─── Start server immediately, connect MongoDB in background ─────────────────
 async function startServer() {
-  let retries = 5;
-  while (retries > 0) {
-    try {
-      await connectDB();
-      break;
-    } catch (err) {
-      retries--;
-      console.error(`MongoDB connection failed (${5 - retries}/5):`, err.message);
-      if (retries === 0) {
-        console.error("Could not connect to MongoDB after 5 attempts. Starting anyway — requireDB will retry per-request.");
-      } else {
-        await new Promise((r) => setTimeout(r, 5000)); // wait 5s before retry
-      }
-    }
-  }
-
+  // Start HTTP immediately — health check works even before DB is ready
   app.listen(PORT, "0.0.0.0", () => {
-    const dbState = mongoose.connection.readyState === 1 ? "MongoDB ready" : "WARNING: MongoDB NOT connected (will retry on requests)";
-    console.log(`Server running on http://0.0.0.0:${PORT} — ${dbState}`);
+    console.log(`Server running on http://0.0.0.0:${PORT} — connecting to MongoDB…`);
   });
+
+  // Connect to MongoDB in background (non-blocking)
+  ensureConnected();
 }
 
 startServer();
