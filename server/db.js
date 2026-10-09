@@ -18,9 +18,9 @@ if (!uri) {
 
 export async function connectDB() {
   await mongoose.connect(uri, {
-    serverSelectionTimeoutMS: 10000,  // give Atlas 10s to respond on cold start
-    socketTimeoutMS: 45000,           // drop dead sockets after 45s
-    heartbeatFrequencyMS: 10000,      // ping Atlas every 10s to keep connection alive
+    serverSelectionTimeoutMS: 30000,  // Atlas free tier can take 20-25s to wake from sleep
+    socketTimeoutMS: 45000,
+    heartbeatFrequencyMS: 10000,
     maxPoolSize: 10,
     retryWrites: true,
   });

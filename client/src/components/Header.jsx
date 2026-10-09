@@ -382,7 +382,15 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
     try {
       const res = await api.authLogin({ email: loginEmail, password: loginPw });
       onLogin(res.token, res.user);
-    } catch (err) { setLoginErrors(err.errors || { form: err.message }); }
+    } catch (err) {
+      const msg = err.message || "";
+      // Friendly message for DB cold-start / 503 errors
+      if (err.status === 503 || msg.toLowerCase().includes("database") || msg.toLowerCase().includes("unavailable")) {
+        setLoginErrors({ form: "The server is warming up. Please wait a moment and try again." });
+      } else {
+        setLoginErrors(err.errors || { form: msg });
+      }
+    }
     finally { setLoginLoading(false); }
   }
 
@@ -407,7 +415,14 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
         businessPhone: bizPhone.trim() || phone,
       });
       onLogin(res.token, res.user);
-    } catch (err) { setSignupErrors(err.errors || { form: err.message }); }
+    } catch (err) {
+      const msg = err.message || "";
+      if (err.status === 503 || msg.toLowerCase().includes("database") || msg.toLowerCase().includes("unavailable")) {
+        setSignupErrors({ form: "The server is warming up. Please wait a moment and try again." });
+      } else {
+        setSignupErrors(err.errors || { form: msg });
+      }
+    }
     finally { setSignupLoading(false); }
   }
 
@@ -575,23 +590,7 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
                   </div>
                 </div>
 
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  if (role === "business") {
-                    // Validate step 2 fields first, then go to step 3
-                    const errs = {};
-                    if (!firstName.trim())      errs.firstName = "First name is required";
-                    if (!email.trim())          errs.email     = "Email address is required";
-                    if (password.length < 6)    errs.password  = "Password must be at least 6 characters";
-                    if (password !== confirmPw) errs.confirmPw = "Passwords do not match";
-                    if (!agreed)                errs.terms     = "You must agree to the Terms and Conditions";
-                    if (Object.keys(errs).length) { setSignupErrors(errs); return; }
-                    setSignupErrors({});
-                    setSignupStep(3);
-                  } else {
-                    handleSignup(e);
-                  }
-                }} className="sp-form" noValidate>
+                <form onSubmit={handleSignup} className="sp-form" noValidate>
                   {signupErrors.form && (
                     <div className="sp-err-banner">Warning: {signupErrors.form}</div>
                   )}
