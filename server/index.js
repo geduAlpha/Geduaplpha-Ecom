@@ -457,19 +457,14 @@ app.get("/api/products", requireDB, async (req, res) => {
     try {
       result = await runQuery();
     } catch (queryErr) {
-      // Stale / dropped connection — try to reconnect once and retry
-      const isConnErr = /not connected|ECONNRESET|ETIMEDOUT|topology|buffering timed out/i.test(queryErr.message);
-      if (isConnErr) {
-        try {
-          await connectDB();
-          result = await runQuery();
-        } catch (retryErr) {
-          console.error("Products retry after reconnect failed:", retryErr.message);
-          return res.status(503).json({ error: "Database unavailable, please retry in a moment." });
-        }
-      } else {
-        console.error("Products query error:", queryErr.message);
-        return res.status(500).json({ error: "DB Error: " + queryErr.message });
+      // Any query error after a DB reconnect — retry once after reconnecting
+      console.error("Products query error (will retry):", queryErr.message);
+      try {
+        await connectDB();
+        result = await runQuery();
+      } catch (retryErr) {
+        console.error("Products retry failed:", retryErr.message);
+        return res.status(503).json({ error: "Database unavailable, please retry in a moment." });
       }
     }
 
@@ -481,7 +476,7 @@ app.get("/api/products", requireDB, async (req, res) => {
     });
   } catch (err) {
     console.error("Products route error:", err);
-    res.status(500).json({ error: "DB Error: " + err.message });
+    res.status(503).json({ error: "Database unavailable, please retry in a moment." });
   }
 });
 

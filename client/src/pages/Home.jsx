@@ -165,6 +165,7 @@ export default function Home() {
   useEffect(() => {
     if (status !== "error") return;
     const is503 = errorMsg.includes("503") ||
+      errorMsg.includes("500") ||
       errorMsg.toLowerCase().includes("connecting") ||
       errorMsg.toLowerCase().includes("reconnect") ||
       errorMsg.toLowerCase().includes("database") ||
@@ -465,6 +466,7 @@ export default function Home() {
             {/* States */}
             {status === "error" && (() => {
               const isDbWarm = errorMsg.includes("503") ||
+                errorMsg.includes("500") ||
                 errorMsg.toLowerCase().includes("connecting") ||
                 errorMsg.toLowerCase().includes("reconnect") ||
                 errorMsg.toLowerCase().includes("database") ||
