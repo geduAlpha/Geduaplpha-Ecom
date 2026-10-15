@@ -94,6 +94,20 @@ function requireDB(req, res, next) {
   });
 }
 
+// ─── withRetry helper — wraps any async DB call, reconnects on buffering timeout
+// Usage: const result = await withRetry(() => Model.create({...}))
+async function withRetry(fn, label = "DB operation") {
+  try {
+    return await fn();
+  } catch (err) {
+    const isBuffering = /buffering timed out|not connected|ECONNRESET|ETIMEDOUT|topology|MongoExpired|MongoNetwork/i.test(err.message);
+    if (!isBuffering) throw err;
+    console.warn(`${label} failed (${err.message.slice(0, 60)}), reconnecting and retrying…`);
+    await connectDB();
+    return await fn(); // one retry after reconnect
+  }
+}
+
 // ─── User Auth ───────────────────────────────────────────────────────────────
 
 // POST /api/auth/register
@@ -115,7 +129,7 @@ app.post("/api/auth/register", requireDB, async (req, res) => {
     const existing = await User.findOne({ email: String(email).trim().toLowerCase() });
     if (existing) return res.status(409).json({ errors: { email: "An account with this email already exists." } });
 
-    const newUser = await User.create({
+    const newUser = await withRetry(() => User.create({
       _id: crypto.randomUUID(),
       name: String(name).trim(),
       email: String(email).trim().toLowerCase(),
@@ -128,7 +142,7 @@ app.post("/api/auth/register", requireDB, async (req, res) => {
       businessCategory: role === "business" ? String(businessCategory || "").trim() : "",
       businessAddress:  role === "business" ? String(businessAddress  || "").trim() : "",
       businessPhone:    role === "business" ? String(businessPhone    || phone || "").trim() : "",
-    });
+    }), "register user");
 
     const token = Buffer.from(JSON.stringify({ id: newUser._id, role: newUser.role, ts: Date.now() })).toString("base64");
 
@@ -618,7 +632,7 @@ app.post("/api/listing-payment", requireDB, async (req, res) => {
     const listingId = `${slugBase}-${uniqueSuffix}`;
 
     // Create the product
-    const newProduct = await Product.create({
+    const newProduct = await withRetry(() => Product.create({
       _id: listingId,
       name: String(name).trim(),
       category: String(category).trim(),
@@ -645,10 +659,10 @@ app.post("/api/listing-payment", requireDB, async (req, res) => {
       views: 0,
       featured: plan.featured,
       ownerId: ownerId || null,
-    });
+    }), "create listing (payment)");
 
     // Record the payment
-    await PostingPayment.create({
+    await withRetry(() => PostingPayment.create({
       _id: crypto.randomUUID().slice(0, 16),
       plan: planKey,
       amount: plan.price,
@@ -657,7 +671,7 @@ app.post("/api/listing-payment", requireDB, async (req, res) => {
       sellerPhone: String(seller.phone || sellerPhone).trim(),
       status: plan.price === 0 ? "verified" : "pending",
       productId: listingId,
-    });
+    }), "record posting payment");
 
     const { _id, __v, ...rest } = newProduct.toObject();
     res.status(201).json({
@@ -714,7 +728,7 @@ app.post("/api/products", requireDB, async (req, res) => {
     const uniqueSuffix = crypto.randomUUID().slice(0, 6);
     const listingId = `${slugBase}-${uniqueSuffix}`;
 
-    const newProduct = await Product.create({
+    const newProduct = await withRetry(() => Product.create({
       _id: listingId,
       name: String(name).trim(),
       category: String(category).trim(),
@@ -741,7 +755,7 @@ app.post("/api/products", requireDB, async (req, res) => {
       views: 1,
       featured: false,
       ownerId: ownerId || null,
-    });
+    }), "create product");
 
     const { _id, __v, ...rest } = newProduct.toObject();
     res.status(201).json({ id: _id, ...rest });
