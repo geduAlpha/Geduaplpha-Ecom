@@ -354,6 +354,16 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+// ─── Ping DB — wakes Atlas and returns connection state ───────────────────────
+// Called by the client on page load to proactively wake the cluster
+app.get("/api/ping-db", async (_req, res) => {
+  const state = mongoose.connection.readyState;
+  if (state === 1) return res.json({ db: "connected" });
+  // Trigger background reconnect
+  ensureConnected();
+  res.json({ db: "connecting", message: "Reconnect triggered — retry in 10s" });
+});
+
 // ─── Locations & Categories ────────────────────────────────────────────────────
 app.get("/api/locations", (_req, res) => {
   res.json({ cities: CITIES });

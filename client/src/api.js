@@ -25,6 +25,7 @@ export const api = {
     );
     return request(`/products?${new URLSearchParams(cleanParams)}`, { signal });
   },
+  pingDb: () => fetch("/api/ping-db").then(r => r.json()).catch(() => ({ db: "error" })),
   product: (id, signal) => request(`/products/${id}`, { signal }),
   createProduct: (body) => request("/products", { method: "POST", body: JSON.stringify(body) }),
   locations: (signal) => request("/locations", { signal }),

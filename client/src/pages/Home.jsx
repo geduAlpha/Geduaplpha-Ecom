@@ -100,6 +100,24 @@ export default function Home() {
 
 
   useEffect(() => {
+    // Proactively wake Atlas on page load — fire-and-forget
+    api.pingDb().then((r) => {
+      if (r.db !== "connected") {
+        // Atlas is waking — poll every 8s until ready, then reload products
+        const poll = setInterval(async () => {
+          const s = await api.pingDb();
+          if (s.db === "connected") {
+            clearInterval(poll);
+            load();
+          }
+        }, 8000);
+        // Stop polling after 90s regardless
+        setTimeout(() => clearInterval(poll), 90000);
+      }
+    }).catch(() => {});
+  }, []); // eslint-disable-line
+
+  useEffect(() => {
     const ac = new AbortController();
     api.locations(ac.signal)
       .then((res) => { if (res.cities) setLocations(res.cities); })
@@ -133,8 +151,8 @@ export default function Home() {
         if (err.name !== "AbortError") {
           console.error("[Home] products fetch failed:", err.message);
           setErrorMsg(err.message || "Unknown error");
+          // Keep showing existing data if we have it — don't wipe the grid
           setStatus("error");
-          setData(null);
         }
       });
 
@@ -143,12 +161,19 @@ export default function Home() {
 
   useEffect(load, [load]);
 
-  // Auto-retry when DB is still connecting (503) — try again after 3 seconds
+  // Auto-retry on ANY 503/DB error — Atlas cold start can take up to 60s
   useEffect(() => {
-    if (status !== "error" || !errorMsg.includes("connecting")) return;
-    const t = setTimeout(() => load(), 3000);
+    if (status !== "error") return;
+    const is503 = errorMsg.includes("503") ||
+      errorMsg.toLowerCase().includes("connecting") ||
+      errorMsg.toLowerCase().includes("reconnect") ||
+      errorMsg.toLowerCase().includes("database") ||
+      errorMsg.toLowerCase().includes("unavailable") ||
+      errorMsg.toLowerCase().includes("network");
+    if (!is503) return;
+    const t = setTimeout(() => load(), 5000);
     return () => clearTimeout(t);
-  }, [status, errorMsg, load]);
+  }, [status, errorMsg]);
 
   const setCategory_ = (v) => {
     const p = new URLSearchParams(searchParams);
@@ -438,21 +463,33 @@ export default function Home() {
             </div>
 
             {/* States */}
-            {status === "error" && (
-              <div className="notice" role="alert" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", padding: "2rem", textAlign: "center" }}>
-                <p style={{ fontWeight: 600 }}>⚠️ Couldn't load listings</p>
-                <p style={{ fontSize: "0.85rem", color: "#64748b" }}>
-                  {errorMsg.includes("connecting")
-                    ? "The database is warming up. Retrying automatically…"
-                    : errorMsg.includes("Network error")
-                    ? "Network error — check your connection or the server may be offline."
-                    : errorMsg || "An unexpected error occurred."}
-                </p>
-                <button className="btn btn-accent btn-sm" onClick={() => load()}>
-                  🔄 Retry Now
-                </button>
-              </div>
-            )}
+            {status === "error" && (() => {
+              const isDbWarm = errorMsg.includes("503") ||
+                errorMsg.toLowerCase().includes("connecting") ||
+                errorMsg.toLowerCase().includes("reconnect") ||
+                errorMsg.toLowerCase().includes("database") ||
+                errorMsg.toLowerCase().includes("unavailable") ||
+                errorMsg.toLowerCase().includes("network");
+              return (
+                <div className="notice" role="alert" style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"0.875rem", padding:"2.5rem 1.5rem", textAlign:"center" }}>
+                  {isDbWarm ? (
+                    <>
+                      <div className="cd-spinner" style={{ width:"2.5rem", height:"2.5rem", borderWidth:"3px" }} />
+                      <p style={{ fontWeight:700, fontSize:"1rem" }}>Loading listings…</p>
+                      <p style={{ fontSize:"0.85rem", color:"#64748b" }}>
+                        The server is starting up. Products will appear automatically in a few seconds.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontWeight:600 }}>⚠️ Couldn't load listings</p>
+                      <p style={{ fontSize:"0.85rem", color:"#64748b" }}>{errorMsg || "An unexpected error occurred."}</p>
+                      <button className="btn btn-accent btn-sm" onClick={() => load()}>🔄 Retry Now</button>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
 
             {status === "ready" && data.items.length === 0 && (
               <div className="marketplace-empty-box">
