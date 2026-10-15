@@ -391,16 +391,14 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
         lastErr = err;
         const is503 = err.status === 503 || (err.message || "").toLowerCase().includes("reconnect") || (err.message || "").toLowerCase().includes("database");
         if (!is503 || attempt === 5) break;
-        // Show "warming up" message and wait before retry
-        setLoginErrors({ form: `Server is warming up… retrying (${attempt + 1}/5)` });
+        // Wait silently — progress shown in button, not as an error
         await new Promise((r) => setTimeout(r, 5000));
-        setLoginErrors({});
       }
     }
     // All retries exhausted — show final error
     const msg = lastErr?.message || "Something went wrong.";
     const is503 = lastErr?.status === 503 || msg.toLowerCase().includes("reconnect") || msg.toLowerCase().includes("database");
-    setLoginErrors(lastErr?.errors || { form: is503 ? "The database is still starting up. Please try again in a moment." : msg });
+    setLoginErrors(lastErr?.errors || { form: is503 ? "Service is starting — please try again in a few seconds." : msg });
     setLoginLoading(false);
   }
 
@@ -432,14 +430,13 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
         lastErr = err;
         const is503 = err.status === 503 || (err.message || "").toLowerCase().includes("reconnect") || (err.message || "").toLowerCase().includes("database");
         if (!is503 || attempt === 5) break;
-        setSignupErrors({ form: `Server is warming up… retrying (${attempt + 1}/5)` });
+        // Wait silently — progress shown in button
         await new Promise((r) => setTimeout(r, 5000));
-        setSignupErrors({});
       }
     }
     const msg = lastErr?.message || "Something went wrong.";
     const is503 = lastErr?.status === 503 || msg.toLowerCase().includes("reconnect") || msg.toLowerCase().includes("database");
-    setSignupErrors(lastErr?.errors || { form: is503 ? "The database is still starting up. Please try again in a moment." : msg });
+    setSignupErrors(lastErr?.errors || { form: is503 ? "Service is starting — please try again in a few seconds." : msg });
     setSignupLoading(false);
   }
 
@@ -523,7 +520,9 @@ function AuthModal({ mode, setMode, onClose, onLogin }) {
                   {loginErrors.password && <span className="sp-err">{loginErrors.password}</span>}
 
                   <button type="submit" className="sp-submit" disabled={loginLoading}>
-                    {loginLoading ? <span className="sp-spinner" /> : "Sign In"}
+                    {loginLoading
+                      ? <><span className="sp-spinner" style={{ marginRight:"6px" }} />{"Signing in…"}</>
+                      : "Sign In"}
                   </button>
                 </form>
 
